@@ -8,6 +8,7 @@ class DocumentMetadata(BaseModel):
     """Metadata for a document."""
     source: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
+    path: Optional[str] = None  # Folder path like "project-a/specs"
 
 
 class Document(BaseModel):

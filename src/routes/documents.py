@@ -72,9 +72,9 @@ async def complete_document(doc_id: str, body: Optional[CompleteDocumentRequest]
     # Mark as complete
     store.complete(doc_id)
 
-    # Save to file and commit to git
+    # Save to file and commit to git/GitHub
     commit_message = body.commit_message if body else None
-    git_result = save_and_commit(doc, commit_message)
+    git_result = await save_and_commit(doc, commit_message)
 
     return CompleteDocumentResponse(
         id=doc.id,
