@@ -8,80 +8,58 @@ allowed-tools: Bash, Read
 
 Push markdown files to a beautiful web viewer for reading on iPad or secondary displays.
 
-## Workflow
+## Command
 
-After writing a markdown file (e.g., `plans/feature.md`), push it:
+After writing a markdown file, push it with this command (uses only Python standard library):
 
 ```bash
-python3 << 'EOF'
-import httpx
-
-# Read the file
-with open("PATH_TO_FILE", "r") as f:
-    content = f.read()
-
-# Extract title from first heading or use filename
-import re
-title_match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
-title = title_match.group(1) if title_match else "PATH_TO_FILE"
-
-data = {
-    "title": title,
-    "content": content,
-    "metadata": {
-        "source": "claude-code",
-        "path": "PROJECT_NAME/FOLDER"
-    }
-}
-
-r = httpx.post("https://another-set-of-eyes.onrender.com/api/documents", json=data)
-doc = r.json()
-print(f"View at: {doc['url']}")
-EOF
+python3 -c "
+import urllib.request, json, re, sys
+file, folder = sys.argv[1], sys.argv[2]
+content = open(file).read()
+title = re.search(r'^# (.+)', content, re.M)
+title = title.group(1) if title else file.split('/')[-1]
+data = json.dumps({'title': title, 'content': content, 'metadata': {'source': 'claude-code', 'path': folder}}).encode()
+req = urllib.request.Request('https://another-set-of-eyes.onrender.com/api/documents', data, {'Content-Type': 'application/json'})
+res = json.loads(urllib.request.urlopen(req).read())
+print(f\"View at: {res['url']}\")
+" FILE FOLDER
 ```
 
 Replace:
-- `PATH_TO_FILE` with the actual file path
-- `PROJECT_NAME/FOLDER` with a logical path (e.g., `my-app/plans`)
+- `FILE` → path to the markdown file
+- `FOLDER` → folder in docs repo (e.g., `project/plans`)
 
-## Complete Example
+## Example
 
-After writing `plans/auth-implementation.md`:
+After writing `plans/auth.md`:
 
 ```bash
-python3 << 'EOF'
-import httpx
-import re
-
-with open("plans/auth-implementation.md", "r") as f:
-    content = f.read()
-
-title_match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
-title = title_match.group(1) if title_match else "Auth Implementation"
-
-r = httpx.post(
-    "https://another-set-of-eyes.onrender.com/api/documents",
-    json={
-        "title": title,
-        "content": content,
-        "metadata": {"source": "claude-code", "path": "my-project/plans"}
-    }
-)
-print(f"View at: {r.json()['url']}")
-EOF
+python3 -c "
+import urllib.request, json, re, sys
+file, folder = sys.argv[1], sys.argv[2]
+content = open(file).read()
+title = re.search(r'^# (.+)', content, re.M)
+title = title.group(1) if title else file.split('/')[-1]
+data = json.dumps({'title': title, 'content': content, 'metadata': {'source': 'claude-code', 'path': folder}}).encode()
+req = urllib.request.Request('https://another-set-of-eyes.onrender.com/api/documents', data, {'Content-Type': 'application/json'})
+res = json.loads(urllib.request.urlopen(req).read())
+print(f\"View at: {res['url']}\")
+" plans/auth.md my-app/plans
 ```
 
 ## When to Use
 
-After writing any of these:
+After writing:
 - `plans/*.md` - Implementation plans
 - `docs/*.md` - Documentation
 - `specs/*.md` - Specifications
-- `*.md` - Any long markdown content
+- Any long markdown file (50+ lines)
 
-## Commit to GitHub (Optional)
+## To Commit to GitHub
 
-To permanently save:
+After pushing, optionally commit to GitHub for permanent storage:
+
 ```bash
-curl -X POST https://another-set-of-eyes.onrender.com/api/documents/{id}/complete
+curl -s -X POST https://another-set-of-eyes.onrender.com/api/documents/DOC_ID/complete
 ```
