@@ -1,86 +1,87 @@
 ---
 name: push-doc
-description: Push markdown documents to Another Set of Eyes viewer for reading on iPad/secondary display. Use when writing plans, documentation, specs, or any long-form markdown content that the user might want to read comfortably.
-allowed-tools: Bash
+description: Push markdown files to Another Set of Eyes viewer for reading on iPad/secondary display. Use after writing plans, docs, or specs to a .md file.
+allowed-tools: Bash, Read
 ---
 
 # Push Document to Another Set of Eyes
 
-Push markdown content to a beautiful web viewer for reading on iPad or secondary displays.
+Push markdown files to a beautiful web viewer for reading on iPad or secondary displays.
 
-## API Endpoint
+## Workflow
 
-```
-https://another-set-of-eyes.onrender.com/api
-```
-
-## How to Push a Document
-
-### Step 1: Create the document
+After writing a markdown file (e.g., `plans/feature.md`), push it:
 
 ```bash
-curl -s -X POST https://another-set-of-eyes.onrender.com/api/documents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Document Title",
-    "content": "# Markdown content here",
+python3 << 'EOF'
+import httpx
+
+# Read the file
+with open("PATH_TO_FILE", "r") as f:
+    content = f.read()
+
+# Extract title from first heading or use filename
+import re
+title_match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+title = title_match.group(1) if title_match else "PATH_TO_FILE"
+
+data = {
+    "title": title,
+    "content": content,
     "metadata": {
-      "source": "claude-code",
-      "path": "project-name/folder",
-      "tags": ["tag1", "tag2"]
+        "source": "claude-code",
+        "path": "PROJECT_NAME/FOLDER"
     }
-  }'
-```
-
-**Response:**
-```json
-{
-  "id": "abc123",
-  "url": "https://another-set-of-eyes.onrender.com/doc/abc123"
 }
+
+r = httpx.post("https://another-set-of-eyes.onrender.com/api/documents", json=data)
+doc = r.json()
+print(f"View at: {doc['url']}")
+EOF
 ```
 
-### Step 2: Tell the user the URL
+Replace:
+- `PATH_TO_FILE` with the actual file path
+- `PROJECT_NAME/FOLDER` with a logical path (e.g., `my-app/plans`)
 
-After creating, tell the user:
-> "Document pushed! View it at: https://another-set-of-eyes.onrender.com/doc/{id}"
+## Complete Example
 
-### Step 3 (Optional): Complete and commit to GitHub
+After writing `plans/auth-implementation.md`:
 
-If the document is finalized:
 ```bash
-curl -s -X POST https://another-set-of-eyes.onrender.com/api/documents/{id}/complete
+python3 << 'EOF'
+import httpx
+import re
+
+with open("plans/auth-implementation.md", "r") as f:
+    content = f.read()
+
+title_match = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
+title = title_match.group(1) if title_match else "Auth Implementation"
+
+r = httpx.post(
+    "https://another-set-of-eyes.onrender.com/api/documents",
+    json={
+        "title": title,
+        "content": content,
+        "metadata": {"source": "claude-code", "path": "my-project/plans"}
+    }
+)
+print(f"View at: {r.json()['url']}")
+EOF
 ```
 
-This commits the document to GitHub for permanent storage.
+## When to Use
 
-## When to Use This Skill
+After writing any of these:
+- `plans/*.md` - Implementation plans
+- `docs/*.md` - Documentation
+- `specs/*.md` - Specifications
+- `*.md` - Any long markdown content
 
-Use this skill proactively when you write:
-- Implementation plans
-- Architecture documents
-- Technical specifications
-- Long documentation
-- Any markdown content over ~100 lines
+## Commit to GitHub (Optional)
 
-## Example Workflow
-
-1. User asks: "Write an implementation plan for feature X"
-2. Write the plan content
-3. Push to Another Set of Eyes using the API
-4. Tell user: "I've pushed the plan to your viewer. Read it at: [URL]"
-5. If user approves, complete the document to commit to GitHub
-
-## Path Convention
-
-Use meaningful paths to organize documents:
-- `project-name/plans` - Implementation plans
-- `project-name/docs` - Documentation
-- `project-name/specs` - Specifications
-- `project-name/architecture` - Architecture docs
-
-## Important Notes
-
-- Content must be valid JSON (escape special characters)
-- For multiline content, use Python to handle escaping properly
-- The viewer renders GitHub-flavored markdown with syntax highlighting
+To permanently save:
+```bash
+curl -X POST https://another-set-of-eyes.onrender.com/api/documents/{id}/complete
+```
