@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from src.routes import documents, pages
+from src.config import get_settings
 
 app = FastAPI(
     title="Document Viewer",
@@ -25,4 +26,5 @@ if static_path.exists():
 @app.get("/health")
 async def health_check():
     """Health check endpoint for deployment."""
-    return {"status": "healthy"}
+    settings = get_settings()
+    return {"status": "healthy", "environment": settings.environment}

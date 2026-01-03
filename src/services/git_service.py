@@ -1,10 +1,10 @@
-import os
 import subprocess
 import re
 from pathlib import Path
 from typing import Optional
 
 from src.models import Document
+from src.config import get_settings
 
 DOCUMENTS_DIR = Path(__file__).parent.parent.parent / "documents"
 
@@ -40,11 +40,13 @@ def save_and_commit(doc: Document, commit_message: Optional[str] = None) -> dict
     Returns dict with commit info or error.
     In production, git operations are skipped (Phase 4.5 will add GitHub API).
     """
-    # Skip git operations in production
-    if os.getenv("ENVIRONMENT") == "production":
+    settings = get_settings()
+
+    # Skip git operations in production (use GitHub API instead)
+    if settings.is_production:
         return {
             "committed": False,
-            "message": "Git disabled in production (Phase 4.5 pending)"
+            "message": "Git disabled in production (use GitHub API)"
         }
 
     # Ensure documents directory exists
