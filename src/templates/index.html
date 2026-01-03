@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Documents{% endblock %}
+
+{% block content %}
+<div class="container">
+  <header>
+    <h1>Documents</h1>
+    <button
+      class="btn"
+      hx-get="/partials/doc-list"
+      hx-target="#document-list"
+      hx-swap="innerHTML"
+    >
+      Refresh
+    </button>
+  </header>
+
+  <main
+    id="document-list"
+    hx-get="/partials/doc-list"
+    hx-trigger="load, every 30s"
+    hx-swap="innerHTML"
+  >
+    <p class="loading">Loading documents...</p>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% if documents %}
+  {% for doc in documents %}
+  <a href="/doc/{{ doc.id }}" class="doc-card">
+    <div class="doc-card-header">
+      <span class="status-indicator status-{{ doc.status }}"></span>
+      <h2>{{ doc.title }}</h2>
+    </div>
+    <div class="doc-card-meta">
+      <span class="time">{{ doc.updated_at | timeago }}</span>
+      <span class="status">{{ doc.status }}</span>
+    </div>
+  </a>
+  {% endfor %}
+{% else %}
+  <p class="empty-state">
+    No documents yet. Waiting for Claude to push content...
+  </p>
+{% endif %}

@@ -1,0 +1,28 @@
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+from src.routes import documents, pages
+
+app = FastAPI(
+    title="Document Viewer",
+    description="A simple server for viewing markdown documents",
+    version="0.1.0",
+)
+
+# API routes (JSON)
+app.include_router(documents.router, prefix="/api")
+
+# Page routes (HTML via Jinja2)
+app.include_router(pages.router)
+
+# Static files (CSS, JS)
+static_path = Path(__file__).parent.parent / "static"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for deployment."""
+    return {"status": "healthy"}
