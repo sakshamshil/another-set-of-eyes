@@ -11,6 +11,7 @@ from src.models import (
     Document,
 )
 from src.services.document_store import store
+from src.services.git_service import save_and_commit
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -63,7 +64,7 @@ async def get_document(doc_id: str):
 
 @router.post("/{doc_id}/complete", response_model=CompleteDocumentResponse)
 async def complete_document(doc_id: str, body: Optional[CompleteDocumentRequest] = None):
-    """Mark document as complete. Git integration added in Phase 3."""
+    """Mark document as complete and commit to git."""
     doc = store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -71,12 +72,14 @@ async def complete_document(doc_id: str, body: Optional[CompleteDocumentRequest]
     # Mark as complete
     store.complete(doc_id)
 
-    # Git integration will be added in Phase 3
-    # For now, return null for git field
+    # Save to file and commit to git
+    commit_message = body.commit_message if body else None
+    git_result = save_and_commit(doc, commit_message)
+
     return CompleteDocumentResponse(
         id=doc.id,
         status="complete",
-        git=None,
+        git=git_result,
     )
 
 
