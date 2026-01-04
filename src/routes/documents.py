@@ -16,10 +16,20 @@ from src.services.git_service import save_and_commit
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-@router.post("", response_model=CreateDocumentResponse, status_code=201)
+@router.post("", response_model=CreateDocumentResponse)
 async def create_document(request: Request, body: CreateDocumentRequest):
-    """Create a new document."""
-    doc = store.create(body)
+    """Create or update a document. If metadata.path matches existing doc, updates it."""
+    # Check for existing document with same path (upsert)
+    existing_doc = None
+    if body.metadata and body.metadata.path:
+        existing_doc = store.find_by_path(body.metadata.path)
+
+    if existing_doc:
+        # Update existing document
+        doc = store.update(existing_doc.id, body.title, body.content)
+    else:
+        # Create new document
+        doc = store.create(body)
 
     # Build URL from request
     base_url = str(request.base_url).rstrip("/")

@@ -46,6 +46,22 @@ class DocumentStore:
             return True
         return False
 
+    def find_by_path(self, path: str) -> Optional[Document]:
+        """Find a document by its metadata path."""
+        for doc in self._documents.values():
+            if doc.metadata.path == path:
+                return doc
+        return None
+
+    def update(self, doc_id: str, title: str, content: str) -> Optional[Document]:
+        """Update a document's title and content."""
+        doc = self._documents.get(doc_id)
+        if doc:
+            doc.title = title
+            doc.content = content
+            doc.updated_at = datetime.utcnow()
+        return doc
+
 
 # Singleton instance
 store = DocumentStore()
