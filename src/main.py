@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
@@ -28,3 +29,21 @@ async def health_check():
     """Health check endpoint for deployment."""
     settings = get_settings()
     return {"status": "healthy", "environment": settings.environment}
+
+
+@app.get("/install", response_class=PlainTextResponse)
+async def install_skill():
+    """Returns a shell script to install the push-doc skill."""
+    skill_path = Path(__file__).parent.parent / "skill" / "SKILL.md"
+    skill_content = skill_path.read_text()
+
+    # Escape for shell
+    escaped = skill_content.replace("'", "'\"'\"'")
+
+    return f"""#!/bin/bash
+mkdir -p ~/.claude/skills/push-doc
+cat > ~/.claude/skills/push-doc/SKILL.md << 'SKILL_EOF'
+{skill_content}
+SKILL_EOF
+echo "Skill installed to ~/.claude/skills/push-doc/SKILL.md"
+"""
