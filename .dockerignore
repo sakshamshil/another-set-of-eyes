@@ -1,0 +1,13 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+.env
+.venv
+venv
+plans/
+CLAUDE.md
+documents/
+*.md
+!skill/SKILL.md
