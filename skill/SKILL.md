@@ -18,8 +18,8 @@ export EYES_URL="https://another-set-of-eyes.koyeb.app"
 ```
 
 Options:
-- `https://another-set-of-eyes.koyeb.app` (faster, recommended)
-- `https://another-set-of-eyes.onrender.com` (fallback)
+- `https://another-set-of-eyes.koyeb.app` (default, faster)
+- `https://another-set-of-eyes.onrender.com` (backup)
 
 ## Workflow
 
@@ -36,7 +36,7 @@ After writing a markdown file, push it:
 python3 -c "
 import urllib.request, json, re, sys, os
 file, folder = sys.argv[1], sys.argv[2]
-base = os.environ.get('EYES_URL', 'https://another-set-of-eyes.onrender.com')
+base = os.environ.get('EYES_URL', 'https://another-set-of-eyes.koyeb.app')
 filename = os.path.basename(file)
 content = open(file).read()
 title = re.search(r'^# (.+)', content, re.M)
@@ -61,7 +61,7 @@ print(f\"ID: {res['id']}\")
 After user approves the document, commit it to GitHub:
 
 ```bash
-curl -s -X POST ${EYES_URL:-https://another-set-of-eyes.onrender.com}/api/documents/DOC_ID/complete | python3 -c "import sys,json; r=json.load(sys.stdin); print(f\"Committed: {r.get('git',{}).get('url','N/A')}\")"
+curl -s -X POST ${EYES_URL:-https://another-set-of-eyes.koyeb.app}/api/documents/DOC_ID/complete | python3 -c "import sys,json; r=json.load(sys.stdin); print(f\"Committed: {r.get('git',{}).get('url','N/A')}\")"
 ```
 
 Replace `DOC_ID` with the document ID from the push command.
