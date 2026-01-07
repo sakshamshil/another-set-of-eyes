@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -32,18 +32,32 @@ async def health_check():
 
 
 @app.get("/install", response_class=PlainTextResponse)
-async def install_skill():
+async def install_skill(request: Request):
     """Returns a shell script to install the push-doc skill."""
     skill_path = Path(__file__).parent.parent / "skill" / "SKILL.md"
     skill_content = skill_path.read_text()
 
-    # Escape for shell
-    escaped = skill_content.replace("'", "'\"'\"'")
+    # Get the base URL from the request (so it uses whichever server you're installing from)
+    base_url = str(request.base_url).rstrip("/")
 
     return f"""#!/bin/bash
 mkdir -p ~/.claude/skills/push-doc
 cat > ~/.claude/skills/push-doc/SKILL.md << 'SKILL_EOF'
 {skill_content}
 SKILL_EOF
+
+# Set EYES_URL if not already set
+if ! grep -q "EYES_URL" ~/.bashrc 2>/dev/null; then
+  echo 'export EYES_URL="{base_url}"' >> ~/.bashrc
+  echo "Added EYES_URL to ~/.bashrc"
+fi
+
+if ! grep -q "EYES_URL" ~/.zshrc 2>/dev/null; then
+  echo 'export EYES_URL="{base_url}"' >> ~/.zshrc 2>/dev/null || true
+fi
+
 echo "Skill installed to ~/.claude/skills/push-doc/SKILL.md"
+echo "EYES_URL set to {base_url}"
+echo ""
+echo "Run: source ~/.bashrc (or restart terminal)"
 """

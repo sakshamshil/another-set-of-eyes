@@ -8,6 +8,19 @@ allowed-tools: Bash, Read
 
 Push markdown files to a beautiful web viewer for reading on iPad or secondary displays.
 
+## Setup (once per machine)
+
+Set your preferred server URL:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export EYES_URL="https://another-set-of-eyes.koyeb.app"
+```
+
+Options:
+- `https://another-set-of-eyes.koyeb.app` (faster, recommended)
+- `https://another-set-of-eyes.onrender.com` (fallback)
+
 ## Workflow
 
 1. **Write** a markdown file (plan, doc, spec)
@@ -23,13 +36,14 @@ After writing a markdown file, push it:
 python3 -c "
 import urllib.request, json, re, sys, os
 file, folder = sys.argv[1], sys.argv[2]
+base = os.environ.get('EYES_URL', 'https://another-set-of-eyes.onrender.com')
 filename = os.path.basename(file)
 content = open(file).read()
 title = re.search(r'^# (.+)', content, re.M)
 title = title.group(1) if title else filename
 path = f'{folder}/{filename}'
 data = json.dumps({'title': title, 'content': content, 'metadata': {'source': 'claude-code', 'path': path}}).encode()
-req = urllib.request.Request('https://another-set-of-eyes.onrender.com/api/documents', data, {'Content-Type': 'application/json'})
+req = urllib.request.Request(f'{base}/api/documents', data, {'Content-Type': 'application/json'})
 res = json.loads(urllib.request.urlopen(req).read())
 print(f\"View at: {res['url']}\")
 print(f\"ID: {res['id']}\")
@@ -47,7 +61,7 @@ print(f\"ID: {res['id']}\")
 After user approves the document, commit it to GitHub:
 
 ```bash
-curl -s -X POST https://another-set-of-eyes.onrender.com/api/documents/DOC_ID/complete | python3 -c "import sys,json; r=json.load(sys.stdin); print(f\"Committed: {r.get('git',{}).get('url','N/A')}\")"
+curl -s -X POST ${EYES_URL:-https://another-set-of-eyes.onrender.com}/api/documents/DOC_ID/complete | python3 -c "import sys,json; r=json.load(sys.stdin); print(f\"Committed: {r.get('git',{}).get('url','N/A')}\")"
 ```
 
 Replace `DOC_ID` with the document ID from the push command.
@@ -83,7 +97,7 @@ python3 -c "..." plans/auth.md my-app/plans
 # Output: View at: https://.../doc/abc123  (same!)
 
 # 5. User approves
-curl -s -X POST https://.../api/documents/abc123/complete
+curl -s -X POST $EYES_URL/api/documents/abc123/complete
 # Output: Committed to GitHub
 ```
 
