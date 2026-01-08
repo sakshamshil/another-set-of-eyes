@@ -1,18 +1,40 @@
 {% if documents %}
+<div class="doc-list">
   {% for doc in documents %}
-  <a href="/doc/{{ doc.id }}" class="doc-card">
-    <div class="doc-card-header">
-      <span class="status-indicator status-{{ doc.status }}"></span>
-      <h2>{{ doc.title }}</h2>
+  <div class="doc-item">
+    <div class="doc-main" onclick="TabManager.open_doc('{{ doc.id }}', '{{ doc.title|e }}')">
+      <div class="doc-status {% if doc.status == 'active' %}active{% endif %}" title="{{ doc.status }}"></div>
+      <div class="doc-info">
+        <div class="doc-title">{{ doc.title }}</div>
+        <div class="doc-meta">
+          <span class="doc-time">{{ doc.updated_at | timeago }}</span>
+          &bull;
+          <span class="doc-source">{{ doc.metadata.source or 'Manual' }}</span>
+        </div>
+      </div>
     </div>
-    <div class="doc-card-meta">
-      <span class="time">{{ doc.updated_at | timeago }}</span>
-      <span class="status">{{ doc.status }}</span>
+    <div class="doc-actions">
+      <button class="action-btn"
+        onclick="event.stopPropagation(); DocumentManager.rename('{{ doc.id }}', '{{ doc.title|e }}')" title="Rename">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+      </button>
+      <button class="action-btn action-btn-danger"
+        onclick="event.stopPropagation(); DocumentManager.delete('{{ doc.id }}')" title="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
     </div>
-  </a>
+  </div>
   {% endfor %}
+</div>
 {% else %}
-  <p class="empty-state">
-    No documents yet. Waiting for Content...
-  </p>
+<p class="empty-state">
+  No documents yet. <br>
+  <span style="font-size: 0.9em; opacity: 0.7;">Push one to see it appear instantly!</span>
+</p>
 {% endif %}

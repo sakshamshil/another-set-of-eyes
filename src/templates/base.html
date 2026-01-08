@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Document Viewer{% endblock %}</title>
+  <title>{% block title %}Another Set of Eyes{% endblock %}</title>
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
 
   <!-- HTMX -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -14,9 +22,66 @@
   <!-- Styles -->
   <link rel="stylesheet" href="/static/css/style.css">
 
+  <!-- Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Markdown Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- XSS Protection -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+
   {% block head %}{% endblock %}
 </head>
+
 <body>
-  {% block content %}{% endblock %}
+  <div class="app-shell">
+    <!-- Top Bar & Tabs -->
+    <header class="app-header">
+      <div class="logo-area" onclick="TabManager.switch('dashboard')" style="cursor: pointer;">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 21.5c-4.5 0-8.5-4-10-9.5 1.5-5.5 5.5-9.5 10-9.5s8.5 4 10 9.5c-1.5 5.5-5.5 9.5-10 9.5z"></path>
+        </svg>
+        <span class="logo-text">Eyes</span>
+      </div>
+
+      <nav class="tab-strip" id="tab-strip">
+        <!-- Dashboard Tab (Always present) -->
+        <div class="tab tab-home active" data-tab-id="dashboard" onclick="TabManager.switch('dashboard')">
+          <span class="tab-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </span>
+          <span class="tab-title">Dashboard</span>
+        </div>
+        <!-- Dynamic Tabs will be injected here -->
+      </nav>
+
+      <div class="window-controls">
+        <div class="status-indicator" id="sse-indicator">
+          <div class="status-dot" id="sse-status"></div>
+          <span class="status-label" id="sse-label">...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="app-main" id="app-main">
+      <!-- Dashboard View (Default) -->
+      <div class="tab-pane active" id="pane-dashboard">
+        {% block content %}{% endblock %}
+      </div>
+      <!-- Dynamic Panes will be injected here -->
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
 </body>
+
 </html>

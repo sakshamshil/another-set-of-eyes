@@ -1,16 +1,35 @@
 from typing import Optional
 from datetime import datetime
+import asyncio
 
 from src.models import Document, CreateDocumentRequest, DocumentMetadata
 
 
 class DocumentStore:
-    """In-memory document storage."""
+    """In-memory document storage with event broadcasting."""
 
     def __init__(self):
         self._documents: dict[str, Document] = {}
+        self._event_queues: list[asyncio.Queue] = []
 
-    def create(self, request: CreateDocumentRequest) -> Document:
+    async def subscribe(self) -> asyncio.Queue:
+        """Subscribe to new document events."""
+        queue = asyncio.Queue()
+        self._event_queues.append(queue)
+        return queue
+
+    def unsubscribe(self, queue: asyncio.Queue):
+        """Unsubscribe from events."""
+        if queue in self._event_queues:
+            self._event_queues.remove(queue)
+
+    async def _broadcast(self, event_type: str, data: dict):
+        """Broadcast event to all subscribers."""
+        message = {"type": event_type, "data": data}
+        for queue in self._event_queues:
+            await queue.put(message)
+
+    async def create(self, request: CreateDocumentRequest) -> Document:
         """Create a new document."""
         doc = Document(
             title=request.title,
@@ -18,6 +37,13 @@ class DocumentStore:
             metadata=request.metadata or DocumentMetadata()
         )
         self._documents[doc.id] = doc
+
+        # Emit event
+        await self._broadcast("new_document", {
+            "id": doc.id,
+            "title": doc.title
+        })
+
         return doc
 
     def get(self, doc_id: str) -> Optional[Document]:
@@ -61,6 +87,20 @@ class DocumentStore:
             doc.content = content
             doc.updated_at = datetime.utcnow()
         return doc
+
+    def rename(self, doc_id: str, new_title: str) -> Optional[Document]:
+        """Rename a document (update title only)."""
+        doc = self._documents.get(doc_id)
+        if doc:
+            doc.title = new_title
+            doc.updated_at = datetime.utcnow()
+        return doc
+
+    def clear_all(self) -> int:
+        """Delete all documents. Returns count of deleted docs."""
+        count = len(self._documents)
+        self._documents.clear()
+        return count
 
 
 # Singleton instance

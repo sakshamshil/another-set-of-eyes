@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from typing import Optional
+import asyncio
+import json
 
 from src.models import (
     CreateDocumentRequest,
@@ -16,6 +19,27 @@ from src.services.git_service import save_and_commit
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
+@router.get("/stream")
+async def stream_events(request: Request):
+    """SSE endpoint for real-time updates."""
+    async def event_generator():
+        queue = await store.subscribe()
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                
+                # Wait for message
+                message = await queue.get()
+                yield f"data: {json.dumps(message)}\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            store.unsubscribe(queue)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @router.post("", response_model=CreateDocumentResponse)
 async def create_document(request: Request, body: CreateDocumentRequest):
     """Create or update a document. If metadata.path matches existing doc, updates it."""
@@ -29,7 +53,7 @@ async def create_document(request: Request, body: CreateDocumentRequest):
         doc = store.update(existing_doc.id, body.title, body.content)
     else:
         # Create new document
-        doc = store.create(body)
+        doc = await store.create(body)
 
     # Build URL from request
     base_url = str(request.base_url).rstrip("/")
@@ -98,3 +122,24 @@ async def delete_document(doc_id: str):
     """Delete a document."""
     if not store.delete(doc_id):
         raise HTTPException(status_code=404, detail="Document not found")
+
+
+@router.delete("", status_code=200)
+async def clear_all_documents():
+    """Delete all documents."""
+    count = store.clear_all()
+    return {"deleted": count}
+
+
+@router.patch("/{doc_id}")
+async def rename_document(doc_id: str, body: dict):
+    """Rename a document (update title only)."""
+    new_title = body.get("title")
+    if not new_title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    
+    doc = store.rename(doc_id, new_title)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    return {"id": doc.id, "title": doc.title}

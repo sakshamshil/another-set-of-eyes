@@ -1,28 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Documents{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="container">
-  <header>
-    <h1>Documents</h1>
-    <button
-      class="btn"
-      hx-get="/partials/doc-list"
-      hx-target="#document-list"
-      hx-swap="innerHTML"
-    >
-      Refresh
-    </button>
-  </header>
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1 class="dashboard-title">Documents</h1>
+    <div class="dashboard-actions">
+      <button class="btn-text" hx-get="/partials/doc-list" hx-target="#document-list" hx-swap="innerHTML">
+        Refresh
+      </button>
+      <button class="btn-text btn-danger" onclick="DocumentManager.clearAll()">
+        Clear All
+      </button>
+    </div>
+  </div>
 
-  <main
-    id="document-list"
-    hx-get="/partials/doc-list"
-    hx-trigger="load, every 30s"
-    hx-swap="innerHTML"
-  >
-    <p class="loading">Loading documents...</p>
-  </main>
+  <div id="document-list" hx-get="/partials/doc-list" hx-trigger="load, refresh" hx-swap="innerHTML">
+    <div class="loading">Loading library...</div>
+  </div>
 </div>
 {% endblock %}

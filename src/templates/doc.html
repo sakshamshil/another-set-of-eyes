@@ -2,43 +2,24 @@
 
 {% block title %}{{ doc.title }}{% endblock %}
 
-{% block head %}
-<!-- Syntax highlighting -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-
-<!-- Markdown rendering -->
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-{% endblock %}
-
 {% block content %}
-<div class="container doc-view">
-  <header>
-    <a href="/" class="back-link">&larr; Back</a>
+<div class="doc-view-container">
+  <div class="doc-header">
+    <div class="doc-badges">
+      <span class="badge">{{ doc.status }}</span>
+      <span class="badge">{{ doc.metadata.source or 'unknown' }}</span>
+    </div>
     <h1>{{ doc.title }}</h1>
-    <span class="status-badge status-{{ doc.status }}">{{ doc.status }}</span>
-  </header>
+    <div style="color: var(--text-dim); font-size: 0.9em; margin-top: 8px;">
+      Updated {{ doc.updated_at | timeago }}
+    </div>
+  </div>
 
-  <article id="doc-content" class="markdown-body">
-    <p class="loading">Rendering document...</p>
+  <article class="markdown-body">
+    <!-- Content rendered by app.js -->
   </article>
+
+  <!-- Raw content for JS to pick up -->
+  <script type="text/plain" class="raw-markdown">{{ doc.content }}</script>
 </div>
-
-<script>
-  // Configure marked with syntax highlighting
-  marked.setOptions({
-    highlight: function(code, lang) {
-      if (lang && hljs.getLanguage(lang)) {
-        return hljs.highlight(code, { language: lang }).value;
-      }
-      return hljs.highlightAuto(code).value;
-    },
-    breaks: true,
-    gfm: true
-  });
-
-  // Render markdown content
-  const content = {{ doc.content | tojson }};
-  document.getElementById('doc-content').innerHTML = marked.parse(content);
-</script>
 {% endblock %}
