@@ -27,6 +27,10 @@ class TabManager {
         if (path.startsWith('/doc/')) {
             const docId = path.split('/doc/')[1];
             if (docId) {
+                // Dashboard pane got polluted by server-side render of doc.html
+                // Reload it with actual dashboard content
+                this.reloadDashboard();
+
                 // Open this doc (will create tab if needed)
                 this.open_doc(docId, 'Loading...');
             }
@@ -398,6 +402,36 @@ class DocumentManager {
     static refreshList() {
         if (typeof htmx !== 'undefined') {
             htmx.trigger('#document-list', 'refresh');
+        }
+    }
+
+    static async reloadDashboard() {
+        // When visiting /doc/{id} directly, the dashboard pane gets polluted
+        // with doc content from server-side render. This reloads it properly.
+        const pane = document.getElementById('pane-dashboard');
+        if (!pane) return;
+
+        try {
+            const res = await fetch('/');
+            if (!res.ok) return;
+
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Extract the dashboard content
+            const dashboardContent = doc.querySelector('.dashboard-container');
+            if (dashboardContent) {
+                pane.innerHTML = '';
+                pane.appendChild(dashboardContent);
+
+                // Re-initialize HTMX for the new content
+                if (typeof htmx !== 'undefined') {
+                    htmx.process(pane);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to reload dashboard:', err);
         }
     }
 }
