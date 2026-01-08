@@ -11,6 +11,21 @@ class TabManager {
     static isInitializing = true; // Flag to prevent pushState during init
 
     static async init() {
+        // Check URL for direct links FIRST
+        const path = window.location.pathname;
+        const isDirectDocLink = path.startsWith('/doc/');
+
+        if (isDirectDocLink) {
+            // IMMEDIATELY deactivate dashboard (it has active class in HTML)
+            const dashTab = document.querySelector('.tab[data-tab-id="dashboard"]');
+            const dashPane = document.getElementById('pane-dashboard');
+            if (dashTab) dashTab.classList.remove('active');
+            if (dashPane) {
+                dashPane.classList.remove('active');
+                dashPane.innerHTML = '<div class="loading">Loading dashboard...</div>';
+            }
+        }
+
         // Restore tabs from localStorage
         const savedTabs = JSON.parse(localStorage.getItem('openTabs') || '[]');
 
@@ -22,22 +37,13 @@ class TabManager {
             this.load_tab_content(tab.id);
         });
 
-        // Check URL for direct links
-        const path = window.location.pathname;
-        if (path.startsWith('/doc/')) {
+        // Handle direct doc link
+        if (isDirectDocLink) {
             const docId = path.split('/doc/')[1];
             if (docId) {
-                // Dashboard pane got polluted by server-side render of doc.html
-                // Clear it immediately and reload in background
-                const dashPane = document.getElementById('pane-dashboard');
-                if (dashPane) {
-                    dashPane.innerHTML = '<div class="loading">Loading dashboard...</div>';
-                }
-
-                // Reload dashboard in background (don't await)
+                // Reload dashboard in background
                 this.reloadDashboard();
-
-                // Open this doc immediately
+                // Open and switch to doc tab
                 this.open_doc(docId, 'Loading...');
             }
         } else {
