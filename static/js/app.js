@@ -10,7 +10,7 @@ class TabManager {
     static activeTabId = 'dashboard';
     static isInitializing = true; // Flag to prevent pushState during init
 
-    static init() {
+    static async init() {
         // Restore tabs from localStorage
         const savedTabs = JSON.parse(localStorage.getItem('openTabs') || '[]');
 
@@ -28,10 +28,10 @@ class TabManager {
             const docId = path.split('/doc/')[1];
             if (docId) {
                 // Dashboard pane got polluted by server-side render of doc.html
-                // Reload it with actual dashboard content
-                this.reloadDashboard();
+                // Reload it with actual dashboard content FIRST
+                await this.reloadDashboard();
 
-                // Open this doc (will create tab if needed)
+                // Now open this doc (will create tab if needed)
                 this.open_doc(docId, 'Loading...');
             }
         } else {
