@@ -402,6 +402,24 @@ body {
   color: #ef4444;
 }
 
+/* Inline Edit Input */
+.inline-edit-input {
+  background: var(--bg-card);
+  border: 1px solid var(--accent-primary);
+  color: var(--text-main);
+  font-size: inherit;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 300px;
+  outline: none;
+}
+
+.inline-edit-input:focus {
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
 .doc-status {
   width: 8px;
   height: 8px;

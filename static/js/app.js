@@ -315,9 +315,42 @@ class DocumentManager {
         }
     }
 
-    static async rename(docId, currentTitle) {
-        const newTitle = prompt('Enter new title:', currentTitle);
-        if (!newTitle || newTitle === currentTitle) return;
+    static startInlineEdit(docId) {
+        const docItem = document.querySelector(`.doc-item[data-doc-id="${docId}"]`);
+        if (!docItem) return;
+
+        const titleEl = docItem.querySelector('.doc-title');
+        const currentTitle = titleEl.dataset.title || titleEl.textContent;
+
+        // Replace title with input
+        titleEl.innerHTML = `
+            <input type="text" class="inline-edit-input" value="${this.escapeHtml(currentTitle)}"
+                onkeydown="if(event.key==='Enter'){DocumentManager.saveInlineEdit('${docId}');} if(event.key==='Escape'){DocumentManager.cancelInlineEdit('${docId}', '${this.escapeHtml(currentTitle)}');}"
+                onblur="DocumentManager.saveInlineEdit('${docId}')"
+            />
+        `;
+
+        const input = titleEl.querySelector('input');
+        input.focus();
+        input.select();
+    }
+
+    static async saveInlineEdit(docId) {
+        const docItem = document.querySelector(`.doc-item[data-doc-id="${docId}"]`);
+        if (!docItem) return;
+
+        const input = docItem.querySelector('.inline-edit-input');
+        if (!input) return;
+
+        const newTitle = input.value.trim();
+        const titleEl = docItem.querySelector('.doc-title');
+        const originalTitle = titleEl.dataset.title;
+
+        // If no change or empty, restore original
+        if (!newTitle || newTitle === originalTitle) {
+            titleEl.textContent = originalTitle;
+            return;
+        }
 
         try {
             const res = await fetch(`/api/documents/${docId}`, {
@@ -326,6 +359,10 @@ class DocumentManager {
                 body: JSON.stringify({ title: newTitle })
             });
             if (!res.ok) throw new Error('Failed to rename');
+
+            // Update inline
+            titleEl.textContent = newTitle;
+            titleEl.dataset.title = newTitle;
 
             // Update tab title if open
             const tabTitle = document.querySelector(`.tab[data-tab-id="${docId}"] .tab-title`);
@@ -338,12 +375,24 @@ class DocumentManager {
                 TabManager.tabs.set(docId, { title: newTitle });
                 TabManager.saveState();
             }
-
-            // Refresh the list
-            this.refreshList();
         } catch (err) {
-            alert('Error: ' + err.message);
+            titleEl.textContent = originalTitle;
+            console.error('Rename failed:', err);
         }
+    }
+
+    static cancelInlineEdit(docId, originalTitle) {
+        const docItem = document.querySelector(`.doc-item[data-doc-id="${docId}"]`);
+        if (!docItem) return;
+
+        const titleEl = docItem.querySelector('.doc-title');
+        titleEl.textContent = originalTitle;
+    }
+
+    static escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     static refreshList() {
