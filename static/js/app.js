@@ -28,10 +28,16 @@ class TabManager {
             const docId = path.split('/doc/')[1];
             if (docId) {
                 // Dashboard pane got polluted by server-side render of doc.html
-                // Reload it with actual dashboard content FIRST
-                await this.reloadDashboard();
+                // Clear it immediately and reload in background
+                const dashPane = document.getElementById('pane-dashboard');
+                if (dashPane) {
+                    dashPane.innerHTML = '<div class="loading">Loading dashboard...</div>';
+                }
 
-                // Now open this doc (will create tab if needed)
+                // Reload dashboard in background (don't await)
+                this.reloadDashboard();
+
+                // Open this doc immediately
                 this.open_doc(docId, 'Loading...');
             }
         } else {
