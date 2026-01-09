@@ -1,32 +1,28 @@
 ---
 name: push-doc
-description: Push markdown files to Another Set of Eyes viewer for reading on iPad/secondary display. Use after writing plans, docs, or specs to a .md file. Pushing the same file again updates the existing document (same URL). After user approval, call complete to commit to GitHub.
+description: ALWAYS push markdown files to Another Set of Eyes viewer after writing plans, docs, or specs. This lets the user read on a second screen. Push immediately after writing any .md file over 50 lines. Pushing the same file updates the existing doc (same URL).
 allowed-tools: Bash, Read
 ---
 
 # Push Document to Another Set of Eyes
 
-Push markdown files to a beautiful web viewer for reading on iPad or secondary displays.
+**IMPORTANT: Auto-push every plan/doc you write so the user can read it on another screen.**
+
+## When to Push (Automatically)
+
+Push immediately after writing:
+- Any implementation plan
+- Any documentation file
+- Any spec or design doc
+- Any markdown file over 50 lines
+
+**Don't ask permission. Just push it.**
 
 ## Setup (once per machine)
 
-Set your preferred server URL:
-
 ```bash
-# Add to ~/.bashrc or ~/.zshrc
 export EYES_URL="https://another-set-of-eyes.koyeb.app"
 ```
-
-Options:
-- `https://another-set-of-eyes.koyeb.app` (default, faster)
-- `https://another-set-of-eyes.onrender.com` (backup)
-
-## Workflow
-
-1. **Write** a markdown file (plan, doc, spec)
-2. **Push** to viewer → appears on iPad
-3. **Iterate** → edit file, push again (same URL updates, iPad auto-refreshes)
-4. **User approves** → call **complete** to commit to GitHub
 
 ## Command: Push
 

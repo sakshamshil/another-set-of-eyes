@@ -1,106 +1,50 @@
 # Another Set of Eyes
 
-A document viewer for AI-generated content. Push markdown documents from Claude to a beautiful web interface for reading on iPad or secondary displays.
+Push plans from your AI coding assistant to another screen.
 
-## Live Demo
+## Why
 
-**Viewer:** https://another-set-of-eyes.onrender.com
+Your Claude Code writes a 500-line implementation plan. You want to read it on another screen from wherever. Or it just runs off and you lose the plan completely. This solves that.
 
-## Features
-
-- **Push documents** via REST API
-- **Beautiful rendering** with GitHub-flavored markdown
-- **Syntax highlighting** for code blocks
-- **Auto-refresh** dashboard with HTMX
-- **GitHub persistence** - documents auto-commit to a docs repo
-- **Folder organization** - organize by project/category
-
-## Quick Start
-
-### Push a Document
+## Install (Claude Code)
 
 ```bash
-curl -X POST https://another-set-of-eyes.onrender.com/api/documents \
+/install sakshamshil/another-set-of-eyes
+```
+
+This adds the skill that auto-pushes plans after Claude writes them.
+
+## How It Works
+
+Push a doc → it appears instantly as a new tab (SSE live updates). No refresh needed.
+
+## Use (Manual)
+
+```bash
+curl -X POST https://another-set-of-eyes.koyeb.app/api/documents \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "My Document",
-    "content": "# Hello World\n\nThis is my document.",
-    "metadata": {
-      "path": "my-project/docs",
-      "source": "claude-code"
-    }
-  }'
+  -d '{"title": "Auth Plan", "content": "...", "metadata": {"source": "claude"}}'
 ```
 
-### View It
+→ Returns a URL. Open it anywhere.
 
-Open the returned URL in your browser or on your iPad.
+## Workflow
 
-### Complete & Commit
+```
+Claude writes plan → auto-pushes → appears as tab instantly → you read → approve → commits to GitHub
+```
+
+## Run Locally
 
 ```bash
-curl -X POST https://another-set-of-eyes.onrender.com/api/documents/{id}/complete
+uvicorn src.main:app --reload --port 8080
 ```
 
-This commits the document to GitHub for permanent storage.
+## API
 
-## API Reference
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/documents` | POST | Create a document |
-| `/api/documents` | GET | List all documents |
-| `/api/documents/{id}` | GET | Get a document |
-| `/api/documents/{id}/complete` | POST | Complete & commit to GitHub |
-| `/api/documents/{id}` | DELETE | Delete a document |
-| `/health` | GET | Health check |
-
-## Claude Code Skill
-
-To use with Claude Code, copy the skill to your skills directory:
-
-```bash
-mkdir -p ~/.claude/skills/push-doc
-cp skill/SKILL.md ~/.claude/skills/push-doc/
-```
-
-Then restart Claude Code. Claude will automatically push long documents to the viewer.
-
-## Local Development
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run server
-uvicorn src.main:app --reload
-
-# View at http://localhost:8000
-```
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `ENVIRONMENT` | `development` or `production` | Yes |
-| `GITHUB_TOKEN` | GitHub PAT for commits | Production |
-| `GITHUB_REPO` | Target repo (e.g., `user/docs`) | Production |
-
-## Architecture
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Claude Code    │────▶│   FastAPI       │────▶│   GitHub API    │
-│  (push docs)    │     │   (Render)      │     │   (persistence) │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │   Web Viewer    │
-                        │   (iPad/Phone)  │
-                        └─────────────────┘
-```
-
-## License
-
-MIT
+| Method | Endpoint | What |
+|--------|----------|------|
+| POST | `/api/documents` | Push doc |
+| GET | `/api/documents` | List docs |
+| DELETE | `/api/documents/{id}` | Delete |
+| POST | `/api/documents/{id}/complete` | Commit to GitHub |

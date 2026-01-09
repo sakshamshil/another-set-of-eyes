@@ -1,7 +1,7 @@
 # Bug: Direct Doc URL Navigation Issue
 
 ## Status
-🔴 **Unresolved**
+🟢 **Resolved**
 
 ## Description
 When visiting a direct document URL (e.g., `/doc/1a3efd4f`), the page does not correctly switch to the document tab. Instead, it shows the dashboard with "Loading dashboard..." message, even though the doc tab IS created.
