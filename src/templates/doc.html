@@ -20,6 +20,6 @@
   </article>
 
   <!-- Raw content for JS to pick up -->
-  <script type="text/plain" class="raw-markdown">{{ doc.content }}</script>
+  <script type="text/plain" class="raw-markdown">{{ doc.content | safe }}</script>
 </div>
 {% endblock %}
