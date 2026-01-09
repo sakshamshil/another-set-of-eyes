@@ -41,14 +41,22 @@ async def dashboard(request: Request):
 
 @router.get("/doc/{doc_id}", response_class=HTMLResponse)
 async def document_page(request: Request, doc_id: str):
-    """Render document viewer page."""
+    """Render document page - shell for direct visits, content for AJAX."""
     doc = store.get(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    return templates.TemplateResponse("doc.html", {
+    # AJAX request (JavaScript fetch for tab content) - return doc content
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return templates.TemplateResponse("doc.html", {
+            "request": request,
+            "doc": doc,
+        })
+
+    # Direct browser visit - return shell with initial_doc_id
+    return templates.TemplateResponse("index.html", {
         "request": request,
-        "doc": doc,
+        "initial_doc_id": doc_id,
     })
 
 

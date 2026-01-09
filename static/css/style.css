@@ -403,6 +403,24 @@ body {
   color: #ef4444;
 }
 
+/* Two-step confirm pattern */
+.btn-danger.confirming {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  animation: pulse-warning 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-warning {
+  from {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+
+  to {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+  }
+}
+
 /* Inline Edit Input */
 .inline-edit-input {
   background: var(--bg-card);

@@ -11,20 +11,9 @@ class TabManager {
     static isInitializing = true; // Flag to prevent pushState during init
 
     static async init() {
-        // Check URL for direct links FIRST
-        const path = window.location.pathname;
-        const isDirectDocLink = path.startsWith('/doc/');
-
-        if (isDirectDocLink) {
-            // IMMEDIATELY deactivate dashboard (it has active class in HTML)
-            const dashTab = document.querySelector('.tab[data-tab-id="dashboard"]');
-            const dashPane = document.getElementById('pane-dashboard');
-            if (dashTab) dashTab.classList.remove('active');
-            if (dashPane) {
-                dashPane.classList.remove('active');
-                dashPane.innerHTML = '<div class="loading">Loading dashboard...</div>';
-            }
-        }
+        // Get initial doc from server-provided data attribute
+        const appMain = document.getElementById('app-main');
+        const initialDocId = appMain?.dataset.initialDoc || '';
 
         // Restore tabs from localStorage
         const savedTabs = JSON.parse(localStorage.getItem('openTabs') || '[]');
@@ -37,15 +26,10 @@ class TabManager {
             this.load_tab_content(tab.id);
         });
 
-        // Handle direct doc link
-        if (isDirectDocLink) {
-            const docId = path.split('/doc/')[1];
-            if (docId) {
-                // Reload dashboard in background
-                this.reloadDashboard();
-                // Open and switch to doc tab
-                this.open_doc(docId, 'Loading...');
-            }
+        // Handle direct doc link (server passed initial_doc_id)
+        if (initialDocId) {
+            // Open and switch to doc tab
+            this.open_doc(initialDocId, 'Loading...');
         } else {
             // Default to dashboard
             this.switch('dashboard');
@@ -167,7 +151,9 @@ class TabManager {
         if (!pane) return;
 
         try {
-            const res = await fetch(`/doc/${docId}`);
+            const res = await fetch(`/doc/${docId}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
             if (!res.ok) throw new Error("Document not found");
 
             const html = await res.text();
@@ -320,7 +306,28 @@ class DocumentManager {
         }
     }
 
-    static async clearAll() {
+    static clearAllPending = false;
+    static clearAllTimeout = null;
+
+    static async clearAll(button) {
+        // Two-step confirmation pattern
+        if (!this.clearAllPending) {
+            // First click: enter confirm state
+            this.clearAllPending = true;
+            button.classList.add('confirming');
+            button.textContent = 'Click again to confirm';
+
+            // Reset after 3 seconds if not confirmed
+            this.clearAllTimeout = setTimeout(() => {
+                this.resetClearAllButton(button);
+            }, 3000);
+            return;
+        }
+
+        // Second click: execute
+        clearTimeout(this.clearAllTimeout);
+        this.resetClearAllButton(button);
+
         try {
             const res = await fetch('/api/documents', { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to clear');
@@ -331,8 +338,14 @@ class DocumentManager {
             // Refresh the list
             this.refreshList();
         } catch (err) {
-            alert('Error: ' + err.message);
+            console.error('Error clearing documents:', err);
         }
+    }
+
+    static resetClearAllButton(button) {
+        this.clearAllPending = false;
+        button.classList.remove('confirming');
+        button.textContent = 'Clear All';
     }
 
     static startInlineEdit(docId) {
