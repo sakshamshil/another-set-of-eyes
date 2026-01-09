@@ -121,8 +121,8 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid transparent;
-  max-width: 200px;
-  min-width: 120px;
+  max-width: 280px;
+  min-width: 200px;
   position: relative;
   user-select: none;
 }

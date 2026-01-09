@@ -134,6 +134,8 @@ class TabManager {
     `;
         // Set title using textContent to preserve special characters
         tab.querySelector('.tab-title').textContent = title;
+        // Add tooltip for desktop hover
+        tab.title = title;
         tabStrip.appendChild(tab);
     }
 
