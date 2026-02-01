@@ -277,8 +277,8 @@ class TabManager {
     static closeAllTimeout = null;
 
     static closeAll(button) {
-        // Two-step confirmation pattern
-        if (!this.closeAllPending) {
+        // Two-step confirmation pattern (only when button is provided)
+        if (button && !this.closeAllPending) {
             // First click: enter confirm state
             this.closeAllPending = true;
             button.classList.add('confirming');
@@ -290,9 +290,15 @@ class TabManager {
             return;
         }
 
-        // Second click: execute
-        clearTimeout(this.closeAllTimeout);
-        this.resetCloseAllButton(button);
+        // Second click or keyboard shortcut: execute
+        if (this.closeAllTimeout) {
+            clearTimeout(this.closeAllTimeout);
+        }
+        if (button) {
+            this.resetCloseAllButton(button);
+        } else {
+            this.closeAllPending = false;
+        }
 
         // Close all document tabs and switch to dashboard
         const tabIds = Array.from(this.tabs.keys());
@@ -301,7 +307,9 @@ class TabManager {
 
     static resetCloseAllButton(button) {
         this.closeAllPending = false;
-        button.classList.remove('confirming');
+        if (button) {
+            button.classList.remove('confirming');
+        }
     }
 
     static escapeHtml(text) {
