@@ -5,7 +5,13 @@
 {% block content %}
 <div class="dashboard-container">
   <div class="dashboard-header">
-    <h1 class="dashboard-title">Documents</h1>
+    <div class="dashboard-title-area">
+      <h1 class="dashboard-title">Documents</h1>
+      <div class="status-indicator" id="sse-indicator">
+        <div class="status-dot" id="sse-status"></div>
+        <span class="status-label" id="sse-label">...</span>
+      </div>
+    </div>
     <div class="dashboard-actions">
       <button class="btn-text" hx-get="/partials/doc-list" hx-target="#document-list" hx-swap="innerHTML">
         Refresh

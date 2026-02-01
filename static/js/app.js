@@ -273,9 +273,43 @@ class TabManager {
         }
     }
 
-    static closeAll() {
+    static closeAllPending = false;
+    static closeAllTimeout = null;
+
+    static closeAll(button) {
+        // Two-step confirmation pattern (only when button is provided)
+        if (button && !this.closeAllPending) {
+            // First click: enter confirm state
+            this.closeAllPending = true;
+            button.classList.add('confirming');
+
+            // Reset after 3 seconds if not confirmed
+            this.closeAllTimeout = setTimeout(() => {
+                this.resetCloseAllButton(button);
+            }, 3000);
+            return;
+        }
+
+        // Second click or keyboard shortcut: execute
+        if (this.closeAllTimeout) {
+            clearTimeout(this.closeAllTimeout);
+        }
+        if (button) {
+            this.resetCloseAllButton(button);
+        } else {
+            this.closeAllPending = false;
+        }
+
+        // Close all document tabs and switch to dashboard
         const tabIds = Array.from(this.tabs.keys());
         tabIds.forEach(id => this.close(id));
+    }
+
+    static resetCloseAllButton(button) {
+        this.closeAllPending = false;
+        if (button) {
+            button.classList.remove('confirming');
+        }
     }
 
     static escapeHtml(text) {

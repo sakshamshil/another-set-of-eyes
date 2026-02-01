@@ -252,6 +252,39 @@ body {
   color: var(--status-dot);
 }
 
+/* Close All Tabs Button */
+.tab-close-all {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tab-close-all svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tab-close-all:hover {
+  background: var(--glass-surface);
+  color: var(--text-main);
+  border-color: var(--glass-border);
+}
+
+/* Two-step confirm pattern for close-all button */
+.tab-close-all.confirming {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  animation: pulse-warning 0.6s ease-in-out infinite alternate;
+}
+
 
 /* === Main Content === */
 .app-main {
@@ -291,8 +324,14 @@ body {
 .dashboard-header {
   margin-bottom: 24px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+}
+
+.dashboard-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .dashboard-title {
