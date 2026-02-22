@@ -85,6 +85,32 @@
     </main>
   </div>
 
+
+  <!-- Manual Push Slide-out Panel -->
+  <div id="push-panel" class="push-panel">
+    <div class="push-panel-header">
+      <h2 class="push-panel-title">New Document</h2>
+      <button class="push-panel-close" onclick="DocumentCreator.close()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="push-panel-body">
+      <label class="push-label" for="push-title">Title</label>
+      <input id="push-title" class="push-input" type="text" placeholder="My Document" autocomplete="off" />
+      <label class="push-label" for="push-content">Content</label>
+      <textarea id="push-content" class="push-textarea"
+        placeholder="# Hello World&#10;&#10;Paste your markdown here..."></textarea>
+    </div>
+    <div class="push-panel-footer">
+      <span id="push-error" class="push-error"></span>
+      <button id="push-submit" class="btn-text btn-submit" onclick="DocumentCreator.submit()">Push Document</button>
+    </div>
+  </div>
+  <div id="push-backdrop" class="push-backdrop" onclick="DocumentCreator.close()"></div>
+
   <script src="/static/js/app.js"></script>
 </body>
 

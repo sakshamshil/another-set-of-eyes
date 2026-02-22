@@ -543,8 +543,113 @@ class SSEClient {
     }
 }
 
+/**
+ * Document Creator
+ * Manages the slide-out panel for manually pushing a new document.
+ */
+class DocumentCreator {
+    static open() {
+        const panel = document.getElementById('push-panel');
+        const backdrop = document.getElementById('push-backdrop');
+        if (!panel || !backdrop) return;
+
+        panel.classList.add('open');
+        backdrop.classList.add('open');
+
+        // Focus the title input
+        const titleInput = document.getElementById('push-title');
+        if (titleInput) setTimeout(() => titleInput.focus(), 50);
+    }
+
+    static close() {
+        const panel = document.getElementById('push-panel');
+        const backdrop = document.getElementById('push-backdrop');
+        if (!panel || !backdrop) return;
+
+        panel.classList.remove('open');
+        backdrop.classList.remove('open');
+
+        // Clear error message only; keep form values in case user re-opens
+        const error = document.getElementById('push-error');
+        if (error) error.textContent = '';
+    }
+
+    static async submit() {
+        const titleInput = document.getElementById('push-title');
+        const contentInput = document.getElementById('push-content');
+        const submitBtn = document.getElementById('push-submit');
+        const errorEl = document.getElementById('push-error');
+
+        const title = titleInput?.value.trim();
+        const content = contentInput?.value.trim();
+
+        // Validate
+        if (!title) {
+            if (errorEl) errorEl.textContent = 'Title is required.';
+            titleInput?.focus();
+            return;
+        }
+        if (!content) {
+            if (errorEl) errorEl.textContent = 'Content is required.';
+            contentInput?.focus();
+            return;
+        }
+
+        // Loading state
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Pushing...';
+        }
+        if (errorEl) errorEl.textContent = '';
+
+        try {
+            const res = await fetch('/api/documents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    content,
+                    metadata: { source: 'manual' }
+                })
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || `HTTP ${res.status}`);
+            }
+
+            const doc = await res.json();
+
+            // Close panel and clear form
+            this.close();
+            titleInput.value = '';
+            contentInput.value = '';
+
+            // Open new doc in a tab and switch to it
+            TabManager.open_doc(doc.id, doc.title);
+
+            // Refresh dashboard list
+            DocumentManager.refreshList();
+
+        } catch (err) {
+            if (errorEl) errorEl.textContent = `Error: ${err.message}`;
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Push Document';
+            }
+        }
+    }
+}
+
+
 // Start
 document.addEventListener('DOMContentLoaded', () => {
     TabManager.init();
     SSEClient.connect();
+
+    // Escape key closes the slide-out panel
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') DocumentCreator.close();
+    });
 });
