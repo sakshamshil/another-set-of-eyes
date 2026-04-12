@@ -1054,3 +1054,12 @@ body {
   margin: 0;
   min-height: 1em;
 }
+
+.auth-gate-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.55;
+  margin: 4px 0 0;
+  text-align: center;
+  line-height: 1.6;
+}
