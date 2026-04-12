@@ -456,17 +456,33 @@ class TabManager {
  * Handles document CRUD operations (delete, rename, clear all).
  */
 class DocumentManager {
-    static async delete(docId) {
-        if (!confirm('Delete this document?')) return;
+    // Per-doc pending state for two-step delete confirmation
+    static _deletePending = new Map(); // docId -> timeoutId
+
+    static async delete(docId, button) {
+        if (!button) return;
+
+        if (!this._deletePending.has(docId)) {
+            // First click — arm the button
+            button.classList.add('confirming');
+            const tid = setTimeout(() => {
+                button.classList.remove('confirming');
+                this._deletePending.delete(docId);
+            }, 3000);
+            this._deletePending.set(docId, tid);
+            return;
+        }
+
+        // Second click — execute
+        clearTimeout(this._deletePending.get(docId));
+        this._deletePending.delete(docId);
+        button.classList.remove('confirming');
 
         try {
             const res = await authFetch(`/api/documents/${docId}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete');
 
-            // Close the tab if open
             TabManager.close(docId);
-
-            // Refresh the list
             this.refreshList();
         } catch (err) {
             alert('Error: ' + err.message);
