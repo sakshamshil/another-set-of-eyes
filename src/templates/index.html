@@ -7,6 +7,10 @@
   <div class="dashboard-header">
     <div class="dashboard-title-area">
       <h1 class="dashboard-title">Documents</h1>
+      <div class="view-toggle-group">
+        <button class="btn-text view-btn active" data-status="active" onclick="DocView.setStatus('active', this)">Active</button>
+        <button class="btn-text view-btn" data-status="archived" onclick="DocView.setStatus('archived', this)">Archived</button>
+      </div>
       <div class="status-indicator" id="sse-indicator">
         <div class="status-dot" id="sse-status"></div>
         <span class="status-label" id="sse-label">...</span>
@@ -45,7 +49,7 @@
     </div>
   </div>
 
-  <div id="document-list" hx-get="/partials/doc-list" hx-trigger="load, refresh" hx-swap="innerHTML">
+  <div id="document-list" hx-get="/partials/doc-list?status=active" hx-trigger="load, refresh" hx-swap="innerHTML">
     <div class="loading">Loading library...</div>
   </div>
 </div>

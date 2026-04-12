@@ -9,6 +9,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # Environment
@@ -23,10 +24,6 @@ class Settings(BaseSettings):
 
     # Phrase hashing — REQUIRED in production. Used as PBKDF2 salt so DB dump alone can't crack phrases.
     phrase_secret: str = ""
-
-    # GitHub API
-    github_token: str = ""
-    github_repo: str = "sakshamshil/another-set-of-eyes-docs"
 
     @property
     def is_production(self) -> bool:

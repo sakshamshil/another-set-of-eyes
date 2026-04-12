@@ -382,6 +382,21 @@ body {
   gap: 12px;
 }
 
+.view-toggle-group {
+  display: flex;
+  gap: 2px;
+}
+
+.view-btn {
+  font-size: 0.75rem;
+  opacity: 0.45;
+  padding: 2px 8px;
+}
+
+.view-btn.active {
+  opacity: 1;
+}
+
 .dashboard-title {
   font-family: var(--font-display);
   font-size: 1.5rem;
@@ -539,6 +554,11 @@ body {
 .doc-status.active {
   background: var(--status-active);
   box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.doc-status.archived {
+  background: var(--text-dim);
+  opacity: 0.5;
 }
 
 .doc-info {

@@ -17,6 +17,7 @@
         </div>
       </div>
       <div class="doc-actions">
+        {% if doc.status == 'active' %}
         <button class="btn-text" onclick="DocumentCreator.edit('{{ doc.id }}')" style="display: flex; align-items: center; gap: 6px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -24,6 +25,25 @@
           </svg>
           Edit
         </button>
+        <button class="btn-text" onclick="DocumentManager.archive('{{ doc.id }}', true)" style="display: flex; align-items: center; gap: 6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+            <polyline points="21 8 21 21 3 21 3 8"></polyline>
+            <rect x="1" y="3" width="22" height="5"></rect>
+            <line x1="10" y1="12" x2="14" y2="12"></line>
+          </svg>
+          Archive
+        </button>
+        {% else %}
+        <button class="btn-text" onclick="DocumentManager.unarchive('{{ doc.id }}', true)" style="display: flex; align-items: center; gap: 6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+            <polyline points="21 8 21 21 3 21 3 8"></polyline>
+            <rect x="1" y="3" width="22" height="5"></rect>
+            <polyline points="10 14 12 12 14 14"></polyline>
+            <line x1="12" y1="12" x2="12" y2="17"></line>
+          </svg>
+          Unarchive
+        </button>
+        {% endif %}
       </div>
     </div>
   </div>

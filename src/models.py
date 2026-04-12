@@ -20,7 +20,7 @@ class Document(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4())[:8])
     title: str
     content: str = ""
-    status: Literal["active", "complete"] = "active"
+    status: Literal["active", "archived"] = "active"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
@@ -31,11 +31,6 @@ class CreateDocumentRequest(BaseModel):
     title: str = _TITLE
     content: str = _CONTENT
     metadata: Optional[DocumentMetadata] = None
-
-
-class CompleteDocumentRequest(BaseModel):
-    """Request body for completing a document."""
-    commit_message: Optional[str] = None
 
 
 class DocumentSummary(BaseModel):
@@ -60,13 +55,6 @@ class CreateDocumentResponse(BaseModel):
     status: str
     url: str
     created_at: datetime
-
-
-class CompleteDocumentResponse(BaseModel):
-    """Response for complete document endpoint."""
-    id: str
-    status: str
-    git: Optional[dict] = None
 
 
 class AuthRequest(BaseModel):

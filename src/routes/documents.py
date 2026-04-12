@@ -10,8 +10,6 @@ from src.database import get_db
 from src.db_models import User
 from src.dependencies import get_current_user
 from src.models import (
-    CompleteDocumentRequest,
-    CompleteDocumentResponse,
     CreateDocumentRequest,
     CreateDocumentResponse,
     Document,
@@ -19,7 +17,6 @@ from src.models import (
     DocumentSummary,
 )
 from src.services.document_store import DocumentStore, subscribe, unsubscribe
-from src.services.git_service import save_and_commit
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -76,7 +73,7 @@ async def create_document(
 
 @router.get("", response_model=DocumentListResponse)
 async def list_documents(
-    status: Optional[Literal["active", "complete"]] = None,
+    status: Optional[Literal["active", "archived"]] = None,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -127,23 +124,30 @@ async def update_document(
     return doc
 
 
-@router.post("/{doc_id}/complete", response_model=CompleteDocumentResponse)
-async def complete_document(
+@router.post("/{doc_id}/archive", status_code=200)
+async def archive_document(
     doc_id: str,
-    body: Optional[CompleteDocumentRequest] = None,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     store = DocumentStore(db, user.id)
-    doc = await store.get(doc_id)
+    doc = await store.archive(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    return {"id": doc.id, "status": doc.status}
 
-    await store.complete(doc_id)
-    commit_message = body.commit_message if body else None
-    git_result = await save_and_commit(doc, commit_message)
 
-    return CompleteDocumentResponse(id=doc.id, status="complete", git=git_result)
+@router.post("/{doc_id}/unarchive", status_code=200)
+async def unarchive_document(
+    doc_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    store = DocumentStore(db, user.id)
+    doc = await store.unarchive(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"id": doc.id, "status": doc.status}
 
 
 @router.delete("/{doc_id}", status_code=204)

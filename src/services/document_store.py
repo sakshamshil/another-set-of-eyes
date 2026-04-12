@@ -113,7 +113,7 @@ class DocumentStore:
         await self.db.refresh(doc_orm)
         return _to_pydantic(doc_orm)
 
-    async def complete(self, doc_id: str) -> Optional[Document]:
+    async def archive(self, doc_id: str) -> Optional[Document]:
         result = await self.db.execute(
             select(DocumentORM).where(
                 DocumentORM.id == doc_id,
@@ -123,7 +123,23 @@ class DocumentStore:
         doc_orm = result.scalar_one_or_none()
         if not doc_orm:
             return None
-        doc_orm.status = "complete"
+        doc_orm.status = "archived"
+        doc_orm.updated_at = datetime.utcnow()
+        await self.db.commit()
+        await self.db.refresh(doc_orm)
+        return _to_pydantic(doc_orm)
+
+    async def unarchive(self, doc_id: str) -> Optional[Document]:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.id == doc_id,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        if not doc_orm:
+            return None
+        doc_orm.status = "active"
         doc_orm.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(doc_orm)

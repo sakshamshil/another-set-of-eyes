@@ -1,7 +1,8 @@
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,13 +79,15 @@ async def document_page(
 @router.get("/partials/doc-list", response_class=HTMLResponse)
 async def document_list_partial(
     request: Request,
+    status: Optional[str] = Query("active"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """HTMX partial — JS injects Authorization header via htmx:configRequest."""
     store = DocumentStore(db, user.id)
-    documents = await store.list()
+    documents = await store.list(status=status)
     return templates.TemplateResponse("partials/doc_list.html", {
         "request": request,
         "documents": documents,
+        "status": status,
     })

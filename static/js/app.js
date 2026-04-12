@@ -560,6 +560,37 @@ class DocumentManager {
         return div.innerHTML;
     }
 
+    static async archive(docId, fromDocView = false) {
+        try {
+            const res = await authFetch(`/api/documents/${docId}/archive`, { method: 'POST' });
+            if (!res.ok) throw new Error('Failed to archive');
+
+            this.refreshList();
+
+            if (fromDocView) {
+                // Reload tab content so the Archive button flips to Unarchive
+                await TabManager.load_tab_content(docId);
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    static async unarchive(docId, fromDocView = false) {
+        try {
+            const res = await authFetch(`/api/documents/${docId}/unarchive`, { method: 'POST' });
+            if (!res.ok) throw new Error('Failed to unarchive');
+
+            this.refreshList();
+
+            if (fromDocView) {
+                await TabManager.load_tab_content(docId);
+            }
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
     static refreshList() {
         if (typeof htmx !== 'undefined') {
             htmx.trigger('#document-list', 'refresh');
@@ -852,6 +883,31 @@ const AgentInstall = {
                     document.removeEventListener('click', handler);
                 });
             }, 0);
+        }
+    }
+};
+
+/**
+ * Doc View
+ * Manages the Active / Archived toggle in the dashboard header.
+ */
+const DocView = {
+    currentStatus: 'active',
+
+    setStatus(status, btn) {
+        this.currentStatus = status;
+
+        // Update toggle button styles
+        document.querySelectorAll('.view-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.status === status);
+        });
+
+        // Update hx-get on the list container and trigger a refresh
+        const list = document.getElementById('document-list');
+        if (list && typeof htmx !== 'undefined') {
+            list.setAttribute('hx-get', `/partials/doc-list?status=${status}`);
+            htmx.process(list);
+            htmx.trigger(list, 'refresh');
         }
     }
 };
