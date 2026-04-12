@@ -379,6 +379,9 @@ body {
 .doc-actions {
   display: flex;
   gap: 4px;
+}
+
+.doc-item .doc-actions {
   opacity: 0;
   transition: opacity 0.2s;
 }
