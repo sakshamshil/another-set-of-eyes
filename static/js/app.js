@@ -664,23 +664,11 @@ class DocumentCreator {
         if (titleInput) setTimeout(() => titleInput.focus(), 50);
     }
 
-    static edit(docId) {
+    static async edit(docId) {
         this.editingDocId = docId;
         const panel = document.getElementById('push-panel');
         const backdrop = document.getElementById('push-backdrop');
         if (!panel || !backdrop) return;
-
-        // Populate fields
-        const tabData = TabManager.tabs.get(docId);
-        const title = tabData ? tabData.title : '';
-        
-        const contentEl = document.querySelector(`#pane-${docId} .raw-markdown`);
-        const content = contentEl ? contentEl.textContent : '';
-
-        const titleInput = document.getElementById('push-title');
-        const contentInput = document.getElementById('push-content');
-        if (titleInput) titleInput.value = title;
-        if (contentInput) contentInput.value = content;
 
         // Change header and button text
         const titleText = document.getElementById('push-panel-title');
@@ -690,6 +678,37 @@ class DocumentCreator {
 
         panel.classList.add('open');
         backdrop.classList.add('open');
+
+        const titleInput = document.getElementById('push-title');
+        const contentInput = document.getElementById('push-content');
+
+        // Try DOM first — tab already loaded
+        const contentEl = document.querySelector(`#pane-${docId} .raw-markdown`);
+        if (contentEl) {
+            const tabData = TabManager.tabs.get(docId);
+            if (titleInput) titleInput.value = tabData ? tabData.title : '';
+            if (contentInput) contentInput.value = contentEl.textContent;
+            if (titleInput) setTimeout(() => titleInput.focus(), 50);
+            return;
+        }
+
+        // Tab not open — fetch from API
+        if (titleInput) titleInput.value = '';
+        if (contentInput) contentInput.value = 'Loading...';
+        contentInput.disabled = true;
+
+        try {
+            const res = await authFetch(`/api/documents/${docId}`);
+            if (res.ok) {
+                const doc = await res.json();
+                if (titleInput) titleInput.value = doc.title;
+                if (contentInput) contentInput.value = doc.content;
+            }
+        } catch (err) {
+            console.error('Failed to load document for editing:', err);
+        } finally {
+            contentInput.disabled = false;
+        }
 
         if (titleInput) setTimeout(() => titleInput.focus(), 50);
     }
