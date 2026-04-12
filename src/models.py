@@ -70,4 +70,4 @@ class CreateDocumentResponse(BaseModel):
 
 class AuthRequest(BaseModel):
     """Request body for phrase authentication."""
-    phrase: str = Field(..., min_length=10, max_length=1000)
+    phrase: str = Field(..., min_length=12, max_length=1000)

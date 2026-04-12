@@ -45,8 +45,8 @@ class AuthGate {
 
         if (!phrase) return;
 
-        if (phrase.length < 10) {
-            if (errorEl) errorEl.textContent = 'Passphrase must be at least 10 characters.';
+        if (phrase.length < 12) {
+            if (errorEl) errorEl.textContent = 'Passphrase must be at least 12 characters.';
             return;
         }
 
@@ -983,6 +983,21 @@ document.addEventListener('htmx:configRequest', (event) => {
 
 // Start
 document.addEventListener('DOMContentLoaded', () => {
+    // Randomise auth gate placeholder
+    const _phrases = [
+        'my llm hallucinates but at least it tries',
+        'vibe coding until production catches fire',
+        'merge conflict in production on a friday',
+        'my context window is full please summarize',
+        'ship it and pray it works flawlessly?',
+        'the diff looks fine until it really isnt',
+        'i just restarted the server and it worked?',
+    ];
+    const phraseInput = document.getElementById('auth-phrase-input');
+    if (phraseInput) {
+        phraseInput.placeholder = _phrases[Math.floor(Math.random() * _phrases.length)];
+    }
+
     if (!AuthGate.getPhrase()) {
         AuthGate.show();
         return; // Don't initialise the app until the user authenticates

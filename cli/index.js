@@ -3,6 +3,16 @@ import * as p from '@clack/prompts';
 import { detect, HARNESSES } from './lib/detect.js';
 import { install } from './lib/install.js';
 
+const PLACEHOLDERS = [
+  'my llm hallucinates but at least it tries',
+  'vibe coding until production catches fire',
+  'merge conflict in production on a friday',
+  'my context window is full please summarize',
+  'ship it and pray it works flawlessly?',
+  'the diff looks fine until it really isnt',
+  'i just restarted the server and it worked?',
+];
+
 async function main() {
   console.log('');
   p.intro('Another Set of Eyes — Agent Install');
@@ -15,10 +25,11 @@ async function main() {
   });
   if (p.isCancel(url)) { p.cancel('Cancelled.'); process.exit(0); }
 
+  const phrasePlaceholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
   const token = await p.text({
     message: 'Your passphrase',
-    placeholder: 'e.g. purple clouds over the mountain',
-    validate: (v) => v.trim().length < 10 ? 'Must be at least 10 characters' : undefined,
+    placeholder: `e.g. ${phrasePlaceholder}`,
+    validate: (v) => v.trim().length < 12 ? 'Must be at least 12 characters' : undefined,
   });
   if (p.isCancel(token)) { p.cancel('Cancelled.'); process.exit(0); }
 
