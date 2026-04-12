@@ -782,6 +782,63 @@ body {
   margin-top: 40px;
 }
 
+/* Agent connect section */
+.agent-connect {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.agent-connect-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.agent-connect-command {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.agent-connect-command code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.agent-connect-copy {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.agent-connect-copy:hover { color: var(--text-main); }
+
+.agent-connect-copy svg {
+  width: 14px;
+  height: 14px;
+}
+
+.agent-connect-hint {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
 
 /* ============================================================
    Manual Push — Slide-out Panel
