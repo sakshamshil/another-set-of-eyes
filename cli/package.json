@@ -1,0 +1,12 @@
+{
+  "name": "asoe-install",
+  "version": "0.1.0",
+  "description": "Install the ASOE agent skill for your AI coding assistant",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "bin": { "asoe-install": "./index.js" },
+  "files": ["index.js", "lib/", "assets/"],
+  "dependencies": {
+    "@clack/prompts": "^0.9.0"
+  }
+}
