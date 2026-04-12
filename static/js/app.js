@@ -150,7 +150,8 @@ class TabManager {
             this.switchWithoutHistory('dashboard');
         } else if (path.startsWith('/doc/')) {
             const docId = path.split('/doc/')[1];
-            if (docId) {
+            // Validate — IDs are 16 hex chars; reject anything else to prevent XSS
+            if (docId && /^[0-9a-f]{16}$/.test(docId)) {
                 if (this.tabs.has(docId)) {
                     this.switchWithoutHistory(docId);
                 } else {
@@ -161,6 +162,8 @@ class TabManager {
                     this.load_tab_content(docId);
                     this.switchWithoutHistory(docId);
                 }
+            } else {
+                this.switchWithoutHistory('dashboard');
             }
         }
     }

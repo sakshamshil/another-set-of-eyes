@@ -15,6 +15,12 @@ from src.routes.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    settings = get_settings()
+    if not settings.phrase_secret:
+        raise RuntimeError(
+            "PHRASE_SECRET is not set. "
+            "Set it in your environment or .env file before starting the server."
+        )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

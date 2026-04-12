@@ -33,6 +33,17 @@ class CreateDocumentRequest(BaseModel):
     metadata: Optional[DocumentMetadata] = None
 
 
+class UpdateDocumentRequest(BaseModel):
+    """Request body for updating a document's title and content."""
+    title: str = _TITLE
+    content: str = _CONTENT
+
+
+class RenameDocumentRequest(BaseModel):
+    """Request body for renaming a document."""
+    title: str = Field(..., min_length=1, max_length=500)
+
+
 class DocumentSummary(BaseModel):
     """Lightweight document info for listing."""
     id: str

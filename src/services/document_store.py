@@ -15,7 +15,7 @@ _event_queues: dict[str, list[asyncio.Queue]] = {}
 
 
 def subscribe(user_id) -> asyncio.Queue:
-    queue: asyncio.Queue = asyncio.Queue()
+    queue: asyncio.Queue = asyncio.Queue(maxsize=100)
     uid = str(user_id)
     if uid not in _event_queues:
         _event_queues[uid] = []
@@ -33,7 +33,10 @@ async def broadcast(user_id, event_type: str, data: dict):
     uid = str(user_id)
     message = {"type": event_type, "data": data}
     for queue in _event_queues.get(uid, []):
-        await queue.put(message)
+        try:
+            queue.put_nowait(message)
+        except asyncio.QueueFull:
+            pass  # Slow/disconnected client — drop event rather than block
 
 
 def _to_pydantic(doc: DocumentORM) -> Document:

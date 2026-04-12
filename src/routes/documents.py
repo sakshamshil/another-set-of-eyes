@@ -15,6 +15,8 @@ from src.models import (
     Document,
     DocumentListResponse,
     DocumentSummary,
+    RenameDocumentRequest,
+    UpdateDocumentRequest,
 )
 from src.services.document_store import DocumentStore, subscribe, unsubscribe
 
@@ -108,17 +110,12 @@ async def get_document(
 @router.put("/{doc_id}", response_model=Document)
 async def update_document(
     doc_id: str,
-    body: dict,
+    body: UpdateDocumentRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    title = body.get("title")
-    content = body.get("content")
-    if not title or not content:
-        raise HTTPException(status_code=400, detail="Title and content are required")
-
     store = DocumentStore(db, user.id)
-    doc = await store.update(doc_id, title, content)
+    doc = await store.update(doc_id, body.title, body.content)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
@@ -174,16 +171,12 @@ async def clear_all_documents(
 @router.patch("/{doc_id}")
 async def rename_document(
     doc_id: str,
-    body: dict,
+    body: RenameDocumentRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    new_title = body.get("title")
-    if not new_title:
-        raise HTTPException(status_code=400, detail="Title is required")
-
     store = DocumentStore(db, user.id)
-    doc = await store.rename(doc_id, new_title)
+    doc = await store.rename(doc_id, body.title)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"id": doc.id, "title": doc.title}

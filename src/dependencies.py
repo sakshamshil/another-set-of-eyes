@@ -10,11 +10,16 @@ from src.config import get_settings
 from src.database import get_db
 from src.db_models import User
 
-# In-memory cache: raw phrase -> (user_id str, expiry timestamp)
+# In-memory cache: sha256(phrase) -> (user_id str, expiry timestamp)
 # Avoids re-running PBKDF2 (100k iterations ~10ms) on every request.
-# Phrases live only in memory — not persisted anywhere.
+# Keyed on sha256(phrase) so raw phrases never sit in memory.
 _phrase_cache: dict[str, tuple[str, float]] = {}
 _CACHE_TTL = 300  # 5 minutes
+
+
+def _cache_key(phrase: str) -> str:
+    """SHA-256 of phrase — fast enough for a cache key, never exposes raw phrase."""
+    return hashlib.sha256(phrase.encode("utf-8")).hexdigest()
 
 
 def hash_phrase(phrase: str) -> str:
@@ -36,7 +41,8 @@ async def authenticate_phrase(phrase: str, db: AsyncSession) -> User:
     Separated so routes can call it conditionally (e.g. only on AJAX paths).
     """
     # Cache hit — skip expensive PBKDF2 computation
-    cached = _phrase_cache.get(phrase)
+    key = _cache_key(phrase)
+    cached = _phrase_cache.get(key)
     if cached:
         user_id, expiry = cached
         if time.monotonic() < expiry:
@@ -45,7 +51,7 @@ async def authenticate_phrase(phrase: str, db: AsyncSession) -> User:
             if user:
                 return user
         else:
-            del _phrase_cache[phrase]
+            del _phrase_cache[key]
 
     # Cache miss — compute hash and query DB
     phrase_hash = hash_phrase(phrase)
@@ -55,7 +61,7 @@ async def authenticate_phrase(phrase: str, db: AsyncSession) -> User:
     if not user:
         raise HTTPException(status_code=401, detail="Invalid phrase")
 
-    _phrase_cache[phrase] = (str(user.id), time.monotonic() + _CACHE_TTL)
+    _phrase_cache[key] = (str(user.id), time.monotonic() + _CACHE_TTL)
     return user
 
 
