@@ -40,8 +40,18 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="empty-state">
-  No documents yet. <br>
-  <span style="font-size: 0.9em; opacity: 0.7;">Push one to see it appear instantly!</span>
-</p>
+<div class="empty-state">
+  <p class="empty-state-title">No documents yet.</p>
+  <p class="empty-state-sub">Connect your agent and it will push docs here instantly.</p>
+  <div class="empty-install">
+    <code id="install-cmd">npx asoe-install</code>
+    <button class="agent-connect-copy" onclick="AgentInstall.copy()" title="Copy">
+      <svg id="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+    </button>
+  </div>
+  <p class="empty-install-hint">Works with Claude Code, Cursor, OpenCode, Windsurf and more.</p>
+</div>
 {% endif %}

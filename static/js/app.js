@@ -820,8 +820,7 @@ class DocumentCreator {
  */
 const AgentInstall = {
     copy() {
-        const cmd = document.getElementById('install-cmd')?.textContent;
-        if (!cmd) return;
+        const cmd = 'npx asoe-install';
         navigator.clipboard.writeText(cmd).then(() => {
             const icon = document.getElementById('copy-icon');
             if (!icon) return;
@@ -830,6 +829,17 @@ const AgentInstall = {
                 icon.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
             }, 1500);
         });
+    },
+
+    showCommand() {
+        // If empty state is visible, scroll to it
+        const emptyState = document.querySelector('.empty-state');
+        if (emptyState) {
+            emptyState.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        // Docs exist — just copy the command and show a toast
+        this.copy();
     }
 };
 
