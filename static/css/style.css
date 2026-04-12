@@ -215,6 +215,10 @@ body {
 /* --- Window Controls / Status --- */
 .window-controls {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .status-indicator {
