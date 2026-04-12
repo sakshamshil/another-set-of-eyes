@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.db_models import User
-from src.dependencies import get_current_user
+from src.dependencies import authenticate_phrase, get_current_user
 from src.services.document_store import DocumentStore
 
 router = APIRouter()
@@ -45,19 +45,28 @@ async def document_page(
     request: Request,
     doc_id: str,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
 ):
     """
-    AJAX fetch (X-Requested-With header): returns doc content fragment.
-    Direct browser visit: returns shell with initial_doc_id so JS can load it.
+    Direct browser visit: always returns the app shell — no auth needed.
+    JS reads initial_doc_id, shows auth gate if needed, then fetches content.
+
+    AJAX fetch (X-Requested-With header): authenticates and returns doc fragment.
     """
     if request.headers.get("X-Requested-With") != "XMLHttpRequest":
-        # Shell for direct navigation — JS will fetch content via API after auth
         return templates.TemplateResponse("index.html", {
             "request": request,
             "initial_doc_id": doc_id,
         })
 
+    # AJAX path — extract phrase and authenticate
+    authorization = request.headers.get("Authorization", "")
+    token = request.query_params.get("token")
+    phrase = authorization[7:] if authorization.startswith("Bearer ") else token
+
+    if not phrase:
+        raise HTTPException(status_code=401, detail="API key required")
+
+    user = await authenticate_phrase(phrase, db)
     store = DocumentStore(db, user.id)
     doc = await store.get(doc_id)
     if not doc:

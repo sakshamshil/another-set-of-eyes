@@ -31,20 +31,10 @@ def hash_phrase(phrase: str) -> str:
     ).hex()
 
 
-async def get_current_user(
-    authorization: Optional[str] = Header(None),
-    token: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    phrase = None
-    if authorization and authorization.startswith("Bearer "):
-        phrase = authorization[7:]
-    elif token:
-        phrase = token
-
-    if not phrase:
-        raise HTTPException(status_code=401, detail="API key required")
-
+async def authenticate_phrase(phrase: str, db: AsyncSession) -> User:
+    """Core auth logic — takes a raw phrase string.
+    Separated so routes can call it conditionally (e.g. only on AJAX paths).
+    """
     # Cache hit — skip expensive PBKDF2 computation
     cached = _phrase_cache.get(phrase)
     if cached:
@@ -67,3 +57,20 @@ async def get_current_user(
 
     _phrase_cache[phrase] = (str(user.id), time.monotonic() + _CACHE_TTL)
     return user
+
+
+async def get_current_user(
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    phrase = None
+    if authorization and authorization.startswith("Bearer "):
+        phrase = authorization[7:]
+    elif token:
+        phrase = token
+
+    if not phrase:
+        raise HTTPException(status_code=401, detail="API key required")
+
+    return await authenticate_phrase(phrase, db)
