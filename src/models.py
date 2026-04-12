@@ -71,4 +71,4 @@ class CompleteDocumentResponse(BaseModel):
 
 class AuthRequest(BaseModel):
     """Request body for phrase authentication."""
-    phrase: str = Field(..., min_length=20, max_length=1000)
+    phrase: str = Field(..., min_length=10, max_length=1000)

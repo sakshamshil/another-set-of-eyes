@@ -38,6 +38,11 @@ class AuthGate {
 
         if (!phrase) return;
 
+        if (phrase.length < 10) {
+            if (errorEl) errorEl.textContent = 'Passphrase must be at least 10 characters.';
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = '...';
         if (errorEl) errorEl.textContent = '';
@@ -49,14 +54,20 @@ class AuthGate {
                 body: JSON.stringify({ phrase }),
             });
 
-            if (!res.ok) throw new Error('Failed');
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                const msg = Array.isArray(data?.detail)
+                    ? data.detail[0]?.msg
+                    : (data?.detail || 'Something went wrong.');
+                throw new Error(msg);
+            }
 
             localStorage.setItem('phrase', phrase);
             window.location.reload();
-        } catch {
-            if (errorEl) errorEl.textContent = 'Something went wrong. Try again.';
+        } catch (err) {
+            if (errorEl) errorEl.textContent = err.message;
             btn.disabled = false;
-            btn.textContent = 'Continue';
+            btn.textContent = 'Enter';
         }
     }
 }
