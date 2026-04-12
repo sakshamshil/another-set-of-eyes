@@ -277,6 +277,54 @@ body {
   border-color: var(--glass-border);
 }
 
+.tab-signout {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tab-signout svg { width: 16px; height: 16px; }
+
+.tab-signout:hover {
+  background: var(--glass-surface);
+  color: var(--text-muted);
+  border-color: var(--glass-border);
+}
+
+/* Connect popover */
+.connect-wrap {
+  position: relative;
+}
+
+.connect-popover {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  min-width: 260px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.connect-popover.open { display: block; }
+
+.connect-popover-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
 /* Two-step confirm pattern for close-all button */
 .tab-close-all.confirming {
   background: #dc2626;

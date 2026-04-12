@@ -30,6 +30,13 @@ class AuthGate {
         this.show();
     }
 
+    static signOut() {
+        localStorage.removeItem('phrase');
+        localStorage.removeItem('openTabs');
+        localStorage.removeItem('activeTabId');
+        window.location.reload();
+    }
+
     static async submit() {
         const input = document.getElementById('auth-phrase-input');
         const errorEl = document.getElementById('auth-error');
@@ -820,8 +827,7 @@ class DocumentCreator {
  */
 const AgentInstall = {
     copy() {
-        const cmd = 'npx asoe-install';
-        navigator.clipboard.writeText(cmd).then(() => {
+        navigator.clipboard.writeText('npx asoe-install').then(() => {
             const icon = document.getElementById('copy-icon');
             if (!icon) return;
             icon.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
@@ -831,15 +837,22 @@ const AgentInstall = {
         });
     },
 
-    showCommand() {
-        // If empty state is visible, scroll to it
-        const emptyState = document.querySelector('.empty-state');
-        if (emptyState) {
-            emptyState.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
+    togglePopover(btn) {
+        const popover = document.getElementById('connect-popover');
+        if (!popover) return;
+        const isOpen = popover.classList.contains('open');
+        popover.classList.toggle('open', !isOpen);
+        if (!isOpen) {
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('click', function handler(e) {
+                    if (!popover.contains(e.target) && e.target !== btn) {
+                        popover.classList.remove('open');
+                    }
+                    document.removeEventListener('click', handler);
+                });
+            }, 0);
         }
-        // Docs exist — just copy the command and show a toast
-        this.copy();
     }
 };
 
