@@ -3,6 +3,10 @@ from datetime import datetime
 from typing import Optional, Literal
 from uuid import uuid4
 
+# Shared field definitions
+_TITLE = Field(..., min_length=1, max_length=500)
+_CONTENT = Field(..., max_length=1_000_000)  # 1 MB ceiling
+
 
 class DocumentMetadata(BaseModel):
     """Metadata for a document."""
@@ -24,8 +28,8 @@ class Document(BaseModel):
 
 class CreateDocumentRequest(BaseModel):
     """Request body for creating a document."""
-    title: str
-    content: str
+    title: str = _TITLE
+    content: str = _CONTENT
     metadata: Optional[DocumentMetadata] = None
 
 
@@ -63,3 +67,8 @@ class CompleteDocumentResponse(BaseModel):
     id: str
     status: str
     git: Optional[dict] = None
+
+
+class AuthRequest(BaseModel):
+    """Request body for phrase authentication."""
+    phrase: str = Field(..., min_length=20, max_length=1000)

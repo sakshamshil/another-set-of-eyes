@@ -18,7 +18,13 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
 
-    # GitHub API (for Phase 4.5)
+    # Database
+    database_url: str = ""
+
+    # Phrase hashing — REQUIRED in production. Used as PBKDF2 salt so DB dump alone can't crack phrases.
+    phrase_secret: str = ""
+
+    # GitHub API
     github_token: str = ""
     github_repo: str = "sakshamshil/another-set-of-eyes-docs"
 

@@ -89,7 +89,7 @@
   <!-- Manual Push Slide-out Panel -->
   <div id="push-panel" class="push-panel">
     <div class="push-panel-header">
-      <h2 class="push-panel-title">New Document</h2>
+      <h2 id="push-panel-title" class="push-panel-title">New Document</h2>
       <button class="push-panel-close" onclick="DocumentCreator.close()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -110,6 +110,29 @@
     </div>
   </div>
   <div id="push-backdrop" class="push-backdrop" onclick="DocumentCreator.close()"></div>
+
+  <!-- Auth Gate -->
+  <div id="auth-gate" class="auth-gate" style="display:none;">
+    <div class="auth-gate-box">
+      <svg class="auth-gate-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 21.5c-4.5 0-8.5-4-10-9.5 1.5-5.5 5.5-9.5 10-9.5s8.5 4 10 9.5c-1.5 5.5-5.5 9.5-10 9.5z"></path>
+      </svg>
+      <h1 class="auth-gate-title">Another Set of Eyes</h1>
+      <p class="auth-gate-subtitle">Type any phrase to enter — it's your private key.<br>New phrase creates a new space. Same phrase returns to yours.</p>
+      <input
+        id="auth-phrase-input"
+        class="auth-gate-input"
+        type="text"
+        placeholder="e.g. purple clouds over the mountain"
+        autocomplete="off"
+        spellcheck="false"
+        onkeydown="if(event.key==='Enter') AuthGate.submit()"
+      />
+      <button id="auth-submit-btn" class="auth-gate-btn" onclick="AuthGate.submit()">Enter</button>
+      <p id="auth-error" class="auth-gate-error"></p>
+    </div>
+  </div>
 
   <script src="/static/js/app.js"></script>
 </body>

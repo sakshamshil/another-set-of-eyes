@@ -1,107 +1,181 @@
-from typing import Optional
-from datetime import datetime
 import asyncio
+from datetime import datetime
+from typing import Optional
+from uuid import uuid4
 
+from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.db_models import Document as DocumentORM
 from src.models import Document, CreateDocumentRequest, DocumentMetadata
+
+# Per-user SSE queues — in-memory, keyed by user_id string.
+# Queues are transient: they live only as long as a client is connected.
+_event_queues: dict[str, list[asyncio.Queue]] = {}
+
+
+def subscribe(user_id) -> asyncio.Queue:
+    queue: asyncio.Queue = asyncio.Queue()
+    uid = str(user_id)
+    if uid not in _event_queues:
+        _event_queues[uid] = []
+    _event_queues[uid].append(queue)
+    return queue
+
+
+def unsubscribe(user_id, queue: asyncio.Queue):
+    uid = str(user_id)
+    if uid in _event_queues and queue in _event_queues[uid]:
+        _event_queues[uid].remove(queue)
+
+
+async def broadcast(user_id, event_type: str, data: dict):
+    uid = str(user_id)
+    message = {"type": event_type, "data": data}
+    for queue in _event_queues.get(uid, []):
+        await queue.put(message)
+
+
+def _to_pydantic(doc: DocumentORM) -> Document:
+    return Document(
+        id=doc.id,
+        title=doc.title,
+        content=doc.content,
+        status=doc.status,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
+        metadata=DocumentMetadata(
+            source=doc.source,
+            tags=doc.tags or [],
+            path=doc.path,
+        ),
+    )
 
 
 class DocumentStore:
-    """In-memory document storage with event broadcasting."""
+    """DB-backed document store scoped to a single user."""
 
-    def __init__(self):
-        self._documents: dict[str, Document] = {}
-        self._event_queues: list[asyncio.Queue] = []
-
-    async def subscribe(self) -> asyncio.Queue:
-        """Subscribe to new document events."""
-        queue = asyncio.Queue()
-        self._event_queues.append(queue)
-        return queue
-
-    def unsubscribe(self, queue: asyncio.Queue):
-        """Unsubscribe from events."""
-        if queue in self._event_queues:
-            self._event_queues.remove(queue)
-
-    async def _broadcast(self, event_type: str, data: dict):
-        """Broadcast event to all subscribers."""
-        message = {"type": event_type, "data": data}
-        for queue in self._event_queues:
-            await queue.put(message)
+    def __init__(self, db: AsyncSession, user_id):
+        self.db = db
+        self.user_id = user_id
 
     async def create(self, request: CreateDocumentRequest) -> Document:
-        """Create a new document."""
-        doc = Document(
+        meta = request.metadata or DocumentMetadata()
+        doc_orm = DocumentORM(
+            id=str(uuid4()).replace("-", "")[:16],
+            user_id=self.user_id,
             title=request.title,
             content=request.content,
-            metadata=request.metadata or DocumentMetadata()
+            source=meta.source,
+            tags=meta.tags,
+            path=meta.path,
         )
-        self._documents[doc.id] = doc
+        self.db.add(doc_orm)
+        await self.db.commit()
+        await self.db.refresh(doc_orm)
 
-        # Emit event
-        await self._broadcast("new_document", {
-            "id": doc.id,
-            "title": doc.title
-        })
-
+        doc = _to_pydantic(doc_orm)
+        await broadcast(self.user_id, "new_document", {"id": doc.id, "title": doc.title})
         return doc
 
-    def get(self, doc_id: str) -> Optional[Document]:
-        """Get a document by ID."""
-        return self._documents.get(doc_id)
+    async def get(self, doc_id: str) -> Optional[Document]:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.id == doc_id,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        return _to_pydantic(doc_orm) if doc_orm else None
 
-    def list(self, status: Optional[str] = None) -> list[Document]:
-        """List all documents, optionally filtered by status."""
-        docs = list(self._documents.values())
+    async def list(self, status: Optional[str] = None) -> list[Document]:
+        q = select(DocumentORM).where(DocumentORM.user_id == self.user_id)
         if status:
-            docs = [d for d in docs if d.status == status]
-        return sorted(docs, key=lambda d: d.updated_at, reverse=True)
+            q = q.where(DocumentORM.status == status)
+        q = q.order_by(DocumentORM.updated_at.desc())
+        result = await self.db.execute(q)
+        return [_to_pydantic(d) for d in result.scalars().all()]
 
-    def complete(self, doc_id: str) -> Optional[Document]:
-        """Mark a document as complete."""
-        doc = self._documents.get(doc_id)
-        if doc:
-            doc.status = "complete"
-            doc.updated_at = datetime.utcnow()
-        return doc
+    async def update(self, doc_id: str, title: str, content: str) -> Optional[Document]:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.id == doc_id,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        if not doc_orm:
+            return None
+        doc_orm.title = title
+        doc_orm.content = content
+        doc_orm.updated_at = datetime.utcnow()
+        await self.db.commit()
+        await self.db.refresh(doc_orm)
+        return _to_pydantic(doc_orm)
 
-    def delete(self, doc_id: str) -> bool:
-        """Delete a document. Returns True if deleted."""
-        if doc_id in self._documents:
-            del self._documents[doc_id]
-            return True
-        return False
+    async def complete(self, doc_id: str) -> Optional[Document]:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.id == doc_id,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        if not doc_orm:
+            return None
+        doc_orm.status = "complete"
+        doc_orm.updated_at = datetime.utcnow()
+        await self.db.commit()
+        await self.db.refresh(doc_orm)
+        return _to_pydantic(doc_orm)
 
-    def find_by_path(self, path: str) -> Optional[Document]:
-        """Find a document by its metadata path."""
-        for doc in self._documents.values():
-            if doc.metadata.path == path:
-                return doc
-        return None
+    async def delete(self, doc_id: str) -> bool:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.id == doc_id,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        if not doc_orm:
+            return False
+        await self.db.delete(doc_orm)
+        await self.db.commit()
+        return True
 
-    def update(self, doc_id: str, title: str, content: str) -> Optional[Document]:
-        """Update a document's title and content."""
-        doc = self._documents.get(doc_id)
-        if doc:
-            doc.title = title
-            doc.content = content
-            doc.updated_at = datetime.utcnow()
-        return doc
+    async def find_by_path(self, path: str) -> Optional[Document]:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.path == path,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        return _to_pydantic(doc_orm) if doc_orm else None
 
-    def rename(self, doc_id: str, new_title: str) -> Optional[Document]:
-        """Rename a document (update title only)."""
-        doc = self._documents.get(doc_id)
-        if doc:
-            doc.title = new_title
-            doc.updated_at = datetime.utcnow()
-        return doc
+    async def rename(self, doc_id: str, new_title: str) -> Optional[Document]:
+        result = await self.db.execute(
+            select(DocumentORM).where(
+                DocumentORM.id == doc_id,
+                DocumentORM.user_id == self.user_id,
+            )
+        )
+        doc_orm = result.scalar_one_or_none()
+        if not doc_orm:
+            return None
+        doc_orm.title = new_title
+        doc_orm.updated_at = datetime.utcnow()
+        await self.db.commit()
+        await self.db.refresh(doc_orm)
+        return _to_pydantic(doc_orm)
 
-    def clear_all(self) -> int:
-        """Delete all documents. Returns count of deleted docs."""
-        count = len(self._documents)
-        self._documents.clear()
+    async def clear_all(self) -> int:
+        result = await self.db.execute(
+            select(DocumentORM).where(DocumentORM.user_id == self.user_id)
+        )
+        count = len(result.scalars().all())
+        await self.db.execute(
+            delete(DocumentORM).where(DocumentORM.user_id == self.user_id)
+        )
+        await self.db.commit()
         return count
-
-
-# Singleton instance
-store = DocumentStore()

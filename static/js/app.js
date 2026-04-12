@@ -1,6 +1,84 @@
 // static/js/app.js
 
 /**
+ * Auth Gate
+ * Manages phrase-based authentication. Phrase is stored in localStorage
+ * and sent as Authorization: Bearer <phrase> on every request.
+ */
+class AuthGate {
+    static show() {
+        const gate = document.getElementById('auth-gate');
+        if (gate) gate.style.display = 'flex';
+    }
+
+    static hide() {
+        const gate = document.getElementById('auth-gate');
+        if (gate) gate.style.display = 'none';
+    }
+
+    static getPhrase() {
+        return localStorage.getItem('phrase') || '';
+    }
+
+    static getHeaders() {
+        const phrase = this.getPhrase();
+        return phrase ? { 'Authorization': `Bearer ${phrase}` } : {};
+    }
+
+    static clear() {
+        localStorage.removeItem('phrase');
+        this.show();
+    }
+
+    static async submit() {
+        const input = document.getElementById('auth-phrase-input');
+        const errorEl = document.getElementById('auth-error');
+        const btn = document.getElementById('auth-submit-btn');
+        const phrase = input?.value.trim();
+
+        if (!phrase) return;
+
+        btn.disabled = true;
+        btn.textContent = '...';
+        if (errorEl) errorEl.textContent = '';
+
+        try {
+            const res = await fetch('/api/auth/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phrase }),
+            });
+
+            if (!res.ok) throw new Error('Failed');
+
+            localStorage.setItem('phrase', phrase);
+            window.location.reload();
+        } catch {
+            if (errorEl) errorEl.textContent = 'Something went wrong. Try again.';
+            btn.disabled = false;
+            btn.textContent = 'Continue';
+        }
+    }
+}
+
+/**
+ * Authenticated fetch — wraps window.fetch, injects Bearer header,
+ * and redirects to auth gate on 401.
+ */
+async function authFetch(url, options = {}) {
+    const headers = {
+        ...AuthGate.getHeaders(),
+        ...options.headers,
+    };
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+        AuthGate.clear();
+        throw new Error('Unauthorized');
+    }
+    return res;
+}
+
+/**
  * Tab Manager
  * Handles creating, switching, and closing tabs.
  * Integrates with History API for shareable URLs.
@@ -153,7 +231,7 @@ class TabManager {
         if (!pane) return;
 
         try {
-            const res = await fetch(`/doc/${docId}`, {
+            const res = await authFetch(`/doc/${docId}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             if (!res.ok) throw new Error("Document not found");
@@ -329,7 +407,7 @@ class DocumentManager {
         if (!confirm('Delete this document?')) return;
 
         try {
-            const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
+            const res = await authFetch(`/api/documents/${docId}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to delete');
 
             // Close the tab if open
@@ -365,7 +443,7 @@ class DocumentManager {
         this.resetClearAllButton(button);
 
         try {
-            const res = await fetch('/api/documents', { method: 'DELETE' });
+            const res = await authFetch('/api/documents', { method: 'DELETE' });
             if (!res.ok) throw new Error('Failed to clear');
 
             // Close all tabs
@@ -422,7 +500,7 @@ class DocumentManager {
         }
 
         try {
-            const res = await fetch(`/api/documents/${docId}`, {
+            const res = await authFetch(`/api/documents/${docId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: newTitle })
@@ -477,7 +555,7 @@ class DocumentManager {
         if (!pane) return;
 
         try {
-            const res = await fetch('/');
+            const res = await fetch('/'); // dashboard shell needs no auth
             if (!res.ok) return;
 
             const html = await res.text();
@@ -510,7 +588,8 @@ class SSEClient {
     static connect() {
         const statusDot = document.getElementById('sse-status');
         const statusLabel = document.getElementById('sse-label');
-        const evtSource = new EventSource("/api/documents/stream");
+        const phrase = AuthGate.getPhrase();
+        const evtSource = new EventSource(`/api/documents/stream?token=${encodeURIComponent(phrase)}`);
 
         evtSource.onopen = () => {
             statusDot.classList.add('connected');
@@ -545,19 +624,62 @@ class SSEClient {
 
 /**
  * Document Creator
- * Manages the slide-out panel for manually pushing a new document.
+ * Manages the slide-out panel for manually pushing a new document or updating an existing one.
  */
 class DocumentCreator {
+    static editingDocId = null;
+
     static open() {
+        this.editingDocId = null;
         const panel = document.getElementById('push-panel');
         const backdrop = document.getElementById('push-backdrop');
         if (!panel || !backdrop) return;
+
+        // Reset text and inputs
+        const titleText = document.getElementById('push-panel-title');
+        const submitBtn = document.getElementById('push-submit');
+        if (titleText) titleText.textContent = 'New Document';
+        if (submitBtn) submitBtn.textContent = 'Push Document';
+        
+        const titleInput = document.getElementById('push-title');
+        const contentInput = document.getElementById('push-content');
+        if (titleInput) titleInput.value = '';
+        if (contentInput) contentInput.value = '';
 
         panel.classList.add('open');
         backdrop.classList.add('open');
 
         // Focus the title input
+        if (titleInput) setTimeout(() => titleInput.focus(), 50);
+    }
+
+    static edit(docId) {
+        this.editingDocId = docId;
+        const panel = document.getElementById('push-panel');
+        const backdrop = document.getElementById('push-backdrop');
+        if (!panel || !backdrop) return;
+
+        // Populate fields
+        const tabData = TabManager.tabs.get(docId);
+        const title = tabData ? tabData.title : '';
+        
+        const contentEl = document.querySelector(`#pane-${docId} .raw-markdown`);
+        const content = contentEl ? contentEl.textContent : '';
+
         const titleInput = document.getElementById('push-title');
+        const contentInput = document.getElementById('push-content');
+        if (titleInput) titleInput.value = title;
+        if (contentInput) contentInput.value = content;
+
+        // Change header and button text
+        const titleText = document.getElementById('push-panel-title');
+        const submitBtn = document.getElementById('push-submit');
+        if (titleText) titleText.textContent = 'Edit Document';
+        if (submitBtn) submitBtn.textContent = 'Update Document';
+
+        panel.classList.add('open');
+        backdrop.classList.add('open');
+
         if (titleInput) setTimeout(() => titleInput.focus(), 50);
     }
 
@@ -598,20 +720,29 @@ class DocumentCreator {
         // Loading state
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Pushing...';
+            submitBtn.textContent = this.editingDocId ? 'Updating...' : 'Pushing...';
         }
         if (errorEl) errorEl.textContent = '';
 
         try {
-            const res = await fetch('/api/documents', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title,
-                    content,
-                    metadata: { source: 'manual' }
-                })
-            });
+            let res;
+            if (this.editingDocId) {
+                res = await authFetch(`/api/documents/${this.editingDocId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+            } else {
+                res = await authFetch('/api/documents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        content,
+                        metadata: { source: 'manual' }
+                    })
+                });
+            }
 
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -625,8 +756,18 @@ class DocumentCreator {
             titleInput.value = '';
             contentInput.value = '';
 
-            // Open new doc in a tab and switch to it
-            TabManager.open_doc(doc.id, doc.title);
+            if (this.editingDocId) {
+                // Refresh the tab content safely
+                await TabManager.load_tab_content(this.editingDocId);
+                // Also rename tab just in case title changed
+                TabManager.tabs.set(this.editingDocId, { title: doc.title });
+                const tabTitle = document.querySelector(`.tab[data-tab-id="${this.editingDocId}"] .tab-title`);
+                if (tabTitle) tabTitle.textContent = doc.title;
+                TabManager.saveState();
+            } else {
+                // Open new doc in a tab and switch to it
+                TabManager.open_doc(doc.id, doc.title);
+            }
 
             // Refresh dashboard list
             DocumentManager.refreshList();
@@ -636,19 +777,31 @@ class DocumentCreator {
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Push Document';
+                submitBtn.textContent = this.editingDocId ? 'Update Document' : 'Push Document';
             }
         }
     }
 }
 
 
+// Inject Authorization header into every HTMX request automatically
+document.addEventListener('htmx:configRequest', (event) => {
+    const phrase = AuthGate.getPhrase();
+    if (phrase) {
+        event.detail.headers['Authorization'] = `Bearer ${phrase}`;
+    }
+});
+
 // Start
 document.addEventListener('DOMContentLoaded', () => {
+    if (!AuthGate.getPhrase()) {
+        AuthGate.show();
+        return; // Don't initialise the app until the user authenticates
+    }
+
     TabManager.init();
     SSEClient.connect();
 
-    // Escape key closes the slide-out panel
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') DocumentCreator.close();
     });
