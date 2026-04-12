@@ -762,12 +762,50 @@ body {
 
 /* Code Blocks - GitHub Dark style */
 .markdown-body pre {
+  position: relative;
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 16px;
   overflow-x: auto;
   margin: 1.5em 0;
+}
+
+.code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 5px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.35);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+  line-height: 0;
+}
+
+.markdown-body pre:hover .code-copy-btn {
+  opacity: 1;
+}
+
+.code-copy-btn:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.code-copy-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.code-copy-btn.copied {
+  opacity: 1;
+  color: #4ade80;
+  border-color: #4ade80;
 }
 
 .markdown-body code {

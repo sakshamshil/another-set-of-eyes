@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.config import get_settings
 from src.database import engine
@@ -11,6 +12,27 @@ from src.db_models import Base  # noqa: F401 — imported so Base.metadata inclu
 import src.db_models  # noqa: F401
 from src.routes import documents, pages
 from src.routes.auth import router as auth_router
+
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' "
+    "https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' "
+    "https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+    "font-src https://fonts.gstatic.com; "
+    "connect-src 'self'; "
+    "img-src 'self' data: https:; "
+    "frame-ancestors 'none';"
+)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = _CSP
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 @asynccontextmanager
@@ -32,6 +54,7 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(documents.router, prefix="/api")

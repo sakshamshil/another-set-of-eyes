@@ -255,7 +255,14 @@ class TabManager {
             const res = await authFetch(`/doc/${docId}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
-            if (!res.ok) throw new Error("Document not found");
+
+            // Ghost tab — document deleted while tab was open; close silently
+            if (res.status === 404) {
+                this.close(docId);
+                return;
+            }
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
             const html = await res.text();
             const parser = new DOMParser();
@@ -307,6 +314,31 @@ class TabManager {
                             hljs.highlightElement(block);
                         });
                     }
+
+                    // Inject copy buttons into each code block
+                    pane.querySelectorAll('pre').forEach(pre => {
+                        const btn = document.createElement('button');
+                        btn.className = 'code-copy-btn';
+                        btn.title = 'Copy code';
+                        btn.setAttribute('aria-label', 'Copy code');
+                        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const code = pre.querySelector('code');
+                            if (!code) return;
+                            navigator.clipboard.writeText(code.textContent).then(() => {
+                                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                                btn.classList.add('copied');
+                                setTimeout(() => {
+                                    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                                    btn.classList.remove('copied');
+                                }, 1500);
+                            });
+                        });
+
+                        pre.appendChild(btn);
+                    });
                 }
             }
 
@@ -635,8 +667,12 @@ class DocumentManager {
 /**
  * SSE Client
  * Listens for new documents and auto-opens them in background.
+ * Reconnects automatically with exponential backoff on disconnection.
  */
 class SSEClient {
+    static _retryDelay = 1000;
+    static _maxRetryDelay = 30000;
+
     static connect() {
         const statusDot = document.getElementById('sse-status');
         const statusLabel = document.getElementById('sse-label');
@@ -644,23 +680,29 @@ class SSEClient {
         const evtSource = new EventSource(`/api/documents/stream?token=${encodeURIComponent(phrase)}`);
 
         evtSource.onopen = () => {
+            this._retryDelay = 1000; // Reset backoff on successful connect
             statusDot.classList.add('connected');
             statusLabel.classList.add('connected');
             statusLabel.textContent = 'LIVE';
-            console.log("SSE Connected");
         };
 
         evtSource.onerror = () => {
             statusDot.classList.remove('connected');
             statusLabel.classList.remove('connected');
             statusLabel.textContent = '...';
+            evtSource.close();
+
+            // Reconnect with exponential backoff (1s → 2s → 4s … capped at 30s)
+            setTimeout(() => {
+                this._retryDelay = Math.min(this._retryDelay * 2, this._maxRetryDelay);
+                this.connect();
+            }, this._retryDelay);
         };
 
         evtSource.onmessage = (event) => {
             const msg = JSON.parse(event.data);
             if (msg.type === 'new_document') {
                 const { id, title } = msg.data;
-                console.log("New Document Received:", title);
 
                 // Refresh dashboard list
                 if (typeof htmx !== 'undefined') {
