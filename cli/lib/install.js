@@ -7,14 +7,6 @@ import { HARNESSES } from './detect.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_SRC = path.join(__dirname, '..', 'assets', 'SKILL.md');
 
-function getShellProfile() {
-  const shell = process.env.SHELL || '';
-  if (shell.includes('zsh'))  return path.join(os.homedir(), '.zshrc');
-  if (shell.includes('fish')) return path.join(os.homedir(), '.config', 'fish', 'config.fish');
-  if (shell.includes('bash')) return path.join(os.homedir(), '.bashrc');
-  return path.join(os.homedir(), '.profile');
-}
-
 function writeSkill(skillDir) {
   const dest = path.join(skillDir, 'push-doc');
   fs.mkdirSync(dest, { recursive: true });
@@ -32,26 +24,22 @@ function setEnvClaudeCode(url, token) {
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 }
 
-function setEnvShell(url, token) {
-  const profile = getShellProfile();
-  const lines = [
-    '',
-    '# ASOE — Another Set of Eyes',
-    `export ASOE_URL="${url}"`,
-    `export ASOE_TOKEN="${token}"`,
-  ].join('\n');
-
-  const existing = fs.existsSync(profile) ? fs.readFileSync(profile, 'utf8') : '';
-  if (existing.includes('ASOE_TOKEN')) {
-    // Update in place
-    const updated = existing
-      .replace(/^export ASOE_URL=.*/m, `export ASOE_URL="${url}"`)
-      .replace(/^export ASOE_TOKEN=.*/m, `export ASOE_TOKEN="${token}"`);
-    fs.writeFileSync(profile, updated);
-  } else {
-    fs.appendFileSync(profile, lines + '\n');
+function setEnvConfig(url, token) {
+  const configDir = path.join(os.homedir(), '.asoe');
+  const configPath = path.join(configDir, 'config.json');
+  let config = {};
+  if (fs.existsSync(configPath)) {
+    try { config = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch {}
   }
-  return profile;
+  config.url = url;
+  config.token = token;
+  fs.mkdirSync(configDir, { recursive: true });
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  // Restrict read permissions on Unix so other users can't read it
+  if (process.platform !== 'win32') {
+    fs.chmodSync(configPath, 0o600);
+  }
+  return configPath;
 }
 
 export async function install(harness, { url, token }) {
@@ -61,6 +49,6 @@ export async function install(harness, { url, token }) {
   if (h.envConfig === 'settings') {
     setEnvClaudeCode(url, token);
   } else {
-    return setEnvShell(url, token);
+    return setEnvConfig(url, token);
   }
 }

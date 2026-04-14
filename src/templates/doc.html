@@ -53,6 +53,6 @@
   </article>
 
   <!-- Raw content for JS to pick up -->
-  <script type="text/plain" class="raw-markdown">{{ doc.content }}</script>
+  <script type="application/json" class="raw-markdown">{{ doc.content | tojson }}</script>
 </div>
 {% endblock %}

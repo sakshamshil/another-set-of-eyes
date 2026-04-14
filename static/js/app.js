@@ -287,7 +287,7 @@ class TabManager {
             // Render Markdown with XSS protection
             const rawScript = pane.querySelector('.raw-markdown');
             if (rawScript) {
-                const markdown = rawScript.textContent;
+                const markdown = JSON.parse(rawScript.textContent);
                 const target = pane.querySelector('.markdown-body');
 
                 if (target && typeof marked !== 'undefined') {
@@ -786,7 +786,7 @@ class DocumentCreator {
         if (contentEl) {
             const tabData = TabManager.tabs.get(docId);
             if (titleInput) titleInput.value = tabData ? tabData.title : '';
-            if (contentInput) contentInput.value = contentEl.textContent;
+            if (contentInput) contentInput.value = JSON.parse(contentEl.textContent);
             if (titleInput) setTimeout(() => titleInput.focus(), 50);
             return;
         }
@@ -998,6 +998,43 @@ document.addEventListener('DOMContentLoaded', () => {
         phraseInput.placeholder = _phrases[Math.floor(Math.random() * _phrases.length)];
     }
 
+    // Wire up static event listeners.
+    // These replace inline onclick/onkeydown attributes removed from base.html so that
+    // the CSP script-src no longer needs 'unsafe-inline'.
+    const logoArea = document.querySelector('.logo-area');
+    if (logoArea) logoArea.addEventListener('click', () => TabManager.switch('dashboard'));
+
+    const dashboardTab = document.querySelector('[data-tab-id="dashboard"]');
+    if (dashboardTab) dashboardTab.addEventListener('click', () => TabManager.switch('dashboard'));
+
+    const signOutBtn = document.querySelector('.tab-signout');
+    if (signOutBtn) signOutBtn.addEventListener('click', () => AuthGate.signOut());
+
+    const closeAllBtn = document.querySelector('.tab-close-all');
+    if (closeAllBtn) closeAllBtn.addEventListener('click', (e) => TabManager.closeAll(e.currentTarget));
+
+    const pushClose = document.querySelector('.push-panel-close');
+    if (pushClose) pushClose.addEventListener('click', () => DocumentCreator.close());
+
+    const pushSubmit = document.getElementById('push-submit');
+    if (pushSubmit) pushSubmit.addEventListener('click', () => DocumentCreator.submit());
+
+    const pushBackdrop = document.getElementById('push-backdrop');
+    if (pushBackdrop) pushBackdrop.addEventListener('click', () => DocumentCreator.close());
+
+    const authInput = document.getElementById('auth-phrase-input');
+    if (authInput) authInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') AuthGate.submit();
+    });
+
+    const authBtn = document.getElementById('auth-submit-btn');
+    if (authBtn) authBtn.addEventListener('click', () => AuthGate.submit());
+
+    // Global keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') DocumentCreator.close();
+    });
+
     if (!AuthGate.getPhrase()) {
         AuthGate.show();
         return; // Don't initialise the app until the user authenticates
@@ -1005,8 +1042,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     TabManager.init();
     SSEClient.connect();
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') DocumentCreator.close();
-    });
 });

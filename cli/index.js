@@ -66,7 +66,7 @@ async function main() {
     `Skill installed for: ${selected.map(k => HARNESSES[k].label).join(', ')}`,
   ];
   if (shellProfile) {
-    notes.push(`Env vars written to ${shellProfile} — run: source ${shellProfile}`);
+    notes.push(`Credentials saved to ${shellProfile}`);
   }
 
   p.note(notes.join('\n'), 'Next steps');

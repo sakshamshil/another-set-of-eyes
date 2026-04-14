@@ -28,11 +28,18 @@ Do not ask. Just push.
 
 ```bash
 python3 -c "
-import urllib.request, json, re, sys, os
+import urllib.request, json, re, sys, os, pathlib
 file = sys.argv[1]
 folder = sys.argv[2] if len(sys.argv) > 2 else 'docs'
-base = os.environ.get('ASOE_URL', 'https://asoe.sakshamshil.xyz').rstrip('/')
+base = os.environ.get('ASOE_URL', '')
 token = os.environ.get('ASOE_TOKEN', '')
+if not base or not token:
+    cfg = pathlib.Path.home() / '.asoe' / 'config.json'
+    if cfg.exists():
+        c = json.loads(cfg.read_text())
+        base = base or c.get('url', '')
+        token = token or c.get('token', '')
+base = (base or 'https://asoe.sakshamshil.xyz').rstrip('/')
 if not token:
     print('Error: ASOE_TOKEN not set. Run: npx asoe-install')
     sys.exit(1)
