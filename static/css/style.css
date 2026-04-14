@@ -84,6 +84,7 @@ body {
   font-weight: 600;
   font-size: 1.1rem;
   letter-spacing: -0.02em;
+  cursor: pointer;
 }
 
 .logo-icon {
@@ -1149,12 +1150,12 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
-/* Auth Gate */
+/* Auth Gate — hidden by default; JS shows it via element.style.display = 'flex' */
 .auth-gate {
   position: fixed;
   inset: 0;
   background: var(--bg-app);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 1000;
