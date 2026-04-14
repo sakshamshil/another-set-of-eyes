@@ -4,25 +4,33 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.config import get_settings
 from src.database import engine
 from src.db_models import Base  # noqa: F401 — imported so Base.metadata includes all models
 import src.db_models  # noqa: F401
+from src.limiter import limiter
 from src.routes import documents, pages
 from src.routes.auth import router as auth_router
 
+# script-src: no 'unsafe-inline' — all inline handlers moved to app.js event listeners.
+# CDN domains are still required so external scripts can load; SRI hashes in the HTML
+# ensure their content hasn't been tampered with.
 _CSP = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' "
+    "script-src 'self' "
     "https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
     "style-src 'self' 'unsafe-inline' "
     "https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
     "font-src https://fonts.gstatic.com; "
     "connect-src 'self'; "
     "img-src 'self' data: https:; "
-    "frame-ancestors 'none';"
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self';"
 )
 
 
@@ -32,6 +40,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = _CSP
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        )
+        # HSTS: enforce HTTPS for 1 year + subdomains
+        # Only send on HTTPS responses to avoid breaking HTTP dev setups
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
         return response
 
 
@@ -54,6 +72,11 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+# Rate limiting — state must be set before routes are registered
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth_router, prefix="/api")
