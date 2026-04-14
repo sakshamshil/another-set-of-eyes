@@ -8,8 +8,8 @@
     <div class="dashboard-title-area">
       <h1 class="dashboard-title">Documents</h1>
       <div class="view-toggle-group">
-        <button class="btn-text view-btn active" data-status="active" onclick="DocView.setStatus('active', this)">Active</button>
-        <button class="btn-text view-btn" data-status="archived" onclick="DocView.setStatus('archived', this)">Archived</button>
+        <button class="btn-text view-btn active" data-status="active" data-action="set-status">Active</button>
+        <button class="btn-text view-btn" data-status="archived" data-action="set-status">Archived</button>
       </div>
       <div class="status-indicator" id="sse-indicator">
         <div class="status-dot" id="sse-status"></div>
@@ -17,12 +17,12 @@
       </div>
     </div>
     <div class="dashboard-actions">
-      <button class="btn-text btn-add" onclick="DocumentCreator.open()">+ New</button>
+      <button class="btn-text btn-add" data-action="new-doc">+ New</button>
       <button class="btn-text" hx-get="/partials/doc-list" hx-target="#document-list" hx-swap="innerHTML">
         Refresh
       </button>
       <div class="connect-wrap">
-        <button class="btn-text btn-connect" onclick="AgentInstall.togglePopover(this)" title="Connect your agent">
+        <button class="btn-text btn-connect" data-action="toggle-connect" title="Connect your agent">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M12 21.5c-4.5 0-8.5-4-10-9.5 1.5-5.5 5.5-9.5 10-9.5s8.5 4 10 9.5c-1.5 5.5-5.5 9.5-10 9.5z"></path>
@@ -33,7 +33,7 @@
           <p class="connect-popover-label">Install the agent skill</p>
           <div class="empty-install" style="margin-bottom:8px;">
             <code>npx asoe-install</code>
-            <button class="agent-connect-copy" onclick="AgentInstall.copy()" title="Copy">
+            <button class="agent-connect-copy" data-action="copy-install" title="Copy">
               <svg id="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -43,7 +43,7 @@
           <p class="empty-install-hint">Works with Claude Code, Codex, OpenCode, Cursor and more.</p>
         </div>
       </div>
-      <button class="btn-text btn-danger" onclick="DocumentManager.clearAll(this)">
+      <button class="btn-text btn-danger" data-action="clear-all">
         Clear All
       </button>
     </div>

@@ -1035,6 +1035,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') DocumentCreator.close();
     });
 
+    // Delegated click handler for data-action elements.
+    // Covers static elements and dynamically injected content (HTMX partials)
+    // without needing unsafe-inline onclick attributes.
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const docId = el.dataset.docId;
+        switch (action) {
+            case 'open-doc':       TabManager.open_doc(docId, el.dataset.docTitle); break;
+            case 'rename-doc':     DocumentManager.startInlineEdit(docId); break;
+            case 'edit-doc':       DocumentCreator.edit(docId); break;
+            case 'archive-doc':    DocumentManager.archive(docId); break;
+            case 'unarchive-doc':  DocumentManager.unarchive(docId); break;
+            case 'delete-doc':     DocumentManager.delete(docId, el); break;
+            case 'copy-install':   AgentInstall.copy(); break;
+            case 'new-doc':        DocumentCreator.open(); break;
+            case 'set-status':     DocView.setStatus(el.dataset.status, el); break;
+            case 'toggle-connect': AgentInstall.togglePopover(el); break;
+            case 'clear-all':      DocumentManager.clearAll(el); break;
+        }
+    });
+
     if (!AuthGate.getPhrase()) {
         AuthGate.show();
         return; // Don't initialise the app until the user authenticates
