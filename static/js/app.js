@@ -1045,7 +1045,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const docId = el.dataset.docId;
         switch (action) {
             case 'open-doc':       TabManager.open_doc(docId, el.dataset.docTitle); break;
-            case 'refresh-doc':    TabManager.load_tab_content(docId); break;
             case 'rename-doc':     DocumentManager.startInlineEdit(docId); break;
             case 'edit-doc':       DocumentCreator.edit(docId); break;
             case 'archive-doc':    DocumentManager.archive(docId); break;

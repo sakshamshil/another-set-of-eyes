@@ -17,7 +17,7 @@
         </div>
       </div>
       <div class="doc-actions">
-        <button class="btn-text" data-action="refresh-doc" data-doc-id="{{ doc.id }}" style="display: flex; align-items: center; gap: 6px;" title="Refresh">
+        <button class="btn-text" onclick="TabManager.load_tab_content('{{ doc.id }}')" style="display: flex; align-items: center; gap: 6px;" title="Refresh">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
             <polyline points="23 4 23 10 17 10"></polyline>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
