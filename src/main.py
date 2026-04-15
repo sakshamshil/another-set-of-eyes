@@ -16,12 +16,9 @@ from src.limiter import limiter
 from src.routes import documents, pages
 from src.routes.auth import router as auth_router
 
-# script-src: no 'unsafe-inline' — all inline handlers moved to app.js event listeners.
-# CDN domains are still required so external scripts can load; SRI hashes in the HTML
-# ensure their content hasn't been tampered with.
 _CSP = (
     "default-src 'self'; "
-    "script-src 'self' "
+    "script-src 'self' 'unsafe-inline' "
     "https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
     "style-src 'self' 'unsafe-inline' "
     "https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
