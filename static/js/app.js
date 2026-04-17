@@ -690,22 +690,14 @@ class SSEClient {
     static _maxRetryDelay = 30000;
 
     static connect() {
-        const statusDot = document.getElementById('sse-status');
-        const statusLabel = document.getElementById('sse-label');
         const phrase = AuthGate.getPhrase();
         const evtSource = new EventSource(`/api/documents/stream?token=${encodeURIComponent(phrase)}`);
 
         evtSource.onopen = () => {
-            this._retryDelay = 1000; // Reset backoff on successful connect
-            statusDot.classList.add('connected');
-            statusLabel.classList.add('connected');
-            statusLabel.textContent = 'LIVE';
+            this._retryDelay = 1000;
         };
 
         evtSource.onerror = () => {
-            statusDot.classList.remove('connected');
-            statusLabel.classList.remove('connected');
-            statusLabel.textContent = '...';
             evtSource.close();
 
             // Reconnect with exponential backoff (1s → 2s → 4s … capped at 30s)

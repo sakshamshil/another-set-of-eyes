@@ -222,40 +222,6 @@ body {
   flex-shrink: 0;
 }
 
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--bg-card);
-  /* Connecting/Offline */
-  border: 1px solid var(--text-dim);
-  transition: all 0.3s;
-}
-
-.status-dot.connected {
-  background-color: var(--status-dot);
-  border-color: transparent;
-  box-shadow: 0 0 8px var(--status-dot);
-}
-
-.status-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-  transition: color 0.3s;
-}
-
-.status-label.connected {
-  color: var(--status-dot);
-}
 
 /* Close All Tabs Button */
 .tab-close-all {
@@ -282,7 +248,8 @@ body {
   border-color: var(--glass-border);
 }
 
-.tab-signout {
+.tab-signout,
+.tab-connect {
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-dim);
@@ -295,9 +262,11 @@ body {
   transition: all 0.2s;
 }
 
-.tab-signout svg { width: 16px; height: 16px; }
+.tab-signout svg,
+.tab-connect svg { width: 16px; height: 16px; }
 
-.tab-signout:hover {
+.tab-signout:hover,
+.tab-connect:hover {
   background: var(--glass-surface);
   color: var(--text-muted);
   border-color: var(--glass-border);
@@ -1290,7 +1259,11 @@ body {
     width: 100%;
   }
 
-  /* Doc list — always show actions (no hover on touch) */
+  /* Doc list — always show actions (no hover on touch); rename+edit available in doc view */
+  .action-btn[title="Rename"],
+  .action-btn[title="Edit content"] {
+    display: none;
+  }
   .doc-item {
     padding: 6px 8px;
     align-items: center;
