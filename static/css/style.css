@@ -359,16 +359,32 @@ body {
 .view-toggle-group {
   display: flex;
   gap: 2px;
+  background: var(--glass-surface);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid var(--glass-border);
 }
 
 .view-btn {
   font-size: 0.75rem;
-  opacity: 0.45;
-  padding: 2px 8px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 400;
+}
+
+.view-btn:hover {
+  color: var(--text-muted);
 }
 
 .view-btn.active {
-  opacity: 1;
+  background: var(--glass-highlight);
+  color: var(--text-main);
+  font-weight: 500;
 }
 
 .dashboard-title {
@@ -484,8 +500,17 @@ body {
   border-color: var(--text-dim);
 }
 
+.btn-danger {
+  background: none;
+  border-color: transparent;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  padding: 8px 10px;
+}
+
 .btn-danger:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: transparent;
   color: #ef4444;
 }
 
@@ -1089,16 +1114,18 @@ body {
   min-height: 1em;
 }
 
-/* Add button - matches btn-text with violet accent */
+/* Primary action button */
 .btn-add {
-  border-left: 2px solid var(--accent-primary);
-  color: var(--text-main);
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  font-weight: 500;
 }
 
 .btn-add:hover {
-  background: rgba(139, 92, 246, 0.12);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background: var(--accent-hover, #7c3aed);
+  border-color: var(--accent-hover, #7c3aed);
+  color: #fff;
 }
 
 /* Submit button */
