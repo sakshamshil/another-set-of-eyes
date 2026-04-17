@@ -1291,15 +1291,19 @@ body {
   }
 
   /* Doc list — always show actions (no hover on touch) */
+  .doc-item {
+    align-items: flex-start;
+    gap: 4px;
+  }
   .doc-item .doc-actions {
     opacity: 1;
-  }
-  .doc-item {
-    gap: 6px;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 2px;
   }
   .action-btn {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 
   /* Doc view */
