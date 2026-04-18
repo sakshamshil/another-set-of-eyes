@@ -887,7 +887,14 @@ body {
   border: 0;
   height: 1px;
   background: #27272a;
-  margin: 3em 0;
+  margin: 1.25em 0;
+}
+
+/* Kill extra top margin when a heading immediately follows a rule */
+.markdown-body hr + h1,
+.markdown-body hr + h2,
+.markdown-body hr + h3 {
+  margin-top: 0.25em;
 }
 
 /* Images */
