@@ -597,50 +597,74 @@ body {
 /* === Document View (Markdown) === */
 .doc-view-container {
   max-width: 800px;
-  /* Container is slightly wider than text column */
   margin: 0 auto;
-  padding: 60px 24px;
-  padding-bottom: 120px;
+  padding: 24px 24px 120px;
 }
 
 .doc-header {
-  margin-bottom: 48px;
-  border-bottom: 1px solid var(--glass-border);
-  padding-bottom: 32px;
-  max-width: 700px;
-  /* Align with text */
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.doc-header h1 {
-  font-family: var(--font-display);
-  font-size: 3rem;
-  line-height: 1.1;
-  font-weight: 700;
-  margin-bottom: 16px;
-  background: linear-gradient(135deg, #fff 30%, #a1a1aa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -0.02em;
-}
-
-.doc-badges {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto 8px;
+  padding-bottom: 8px;
+}
+
+.doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  min-width: 0;
+}
+
+.doc-updated {
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.03);
-  color: var(--text-muted);
+  color: var(--text-dim);
   border: 1px solid var(--glass-border);
   letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Icon-only action buttons in the doc header */
+.icon-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.icon-btn svg { width: 16px; height: 16px; }
+
+.icon-btn:hover {
+  background: var(--glass-surface);
+  color: var(--text-main);
+  border-color: var(--glass-border);
+}
+
+/* First heading inside markdown body acts as the page title —
+   kill the default top margin so it hugs the metadata row. */
+.markdown-body > :first-child {
+  margin-top: 0;
 }
 
 /* === Markdown Body (Deep Overhaul) === */
@@ -1313,15 +1337,11 @@ body {
 
   /* Doc view */
   .doc-view-container {
-    padding: 16px 12px;
+    padding: 12px 12px 80px;
   }
-  .doc-header h1 {
-    font-size: 1.4rem;
-    line-height: 1.3;
-  }
-  .doc-actions {
-    flex-wrap: wrap;
-    gap: 6px;
+  .doc-meta {
+    font-size: 0.7rem;
+    gap: 8px;
   }
 
   /* Markdown body */
