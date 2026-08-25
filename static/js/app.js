@@ -274,13 +274,17 @@ class TabManager {
             pane.innerHTML = '';
             pane.appendChild(content);
 
-            // Update tab title from loaded content
-            const titleEl = content.querySelector('h1');
-            if (titleEl) {
-                const title = titleEl.textContent;
-                this.tabs.set(docId, { title });
+            // Update the tab title from the fetched page's <title>, which the server
+            // fills with the real doc title. The old code read an <h1> out of
+            // .doc-view-container, but markdown has not been rendered into it yet at
+            // this point — so a tab opened by direct URL stayed named "Loading..."
+            // and was saved to localStorage that way.
+            const fetchedTitle = (doc.title || '').trim();
+            if (fetchedTitle) {
+                this.tabs.set(docId, { title: fetchedTitle });
                 const tabEl = document.querySelector(`.tab[data-tab-id="${docId}"] .tab-title`);
-                if (tabEl) tabEl.textContent = title;
+                if (tabEl) tabEl.textContent = fetchedTitle;
+                if (this.activeTabId === docId) document.title = fetchedTitle;
                 this.saveState();
             }
 
@@ -709,16 +713,37 @@ class SSEClient {
 
         evtSource.onmessage = (event) => {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'new_document') {
-                const { id, title } = msg.data;
+            const { id, title } = msg.data || {};
 
-                // Refresh dashboard list
+            const refreshList = () => {
                 if (typeof htmx !== 'undefined') {
                     htmx.trigger('#document-list', 'refresh');
                 }
+            };
 
-                // Open tab in background (no switch)
-                TabManager.open_doc_background(id, title);
+            switch (msg.type) {
+                case 'new_document':
+                    refreshList();
+                    // Open tab in background (no switch)
+                    TabManager.open_doc_background(id, title);
+                    break;
+
+                case 'document_updated':
+                    // Re-pushing the same file path fires this. Reload the tab in
+                    // place so a second screen updates without being touched.
+                    refreshList();
+                    if (TabManager.tabs.has(id)) TabManager.load_tab_content(id);
+                    break;
+
+                case 'document_deleted':
+                    refreshList();
+                    if (TabManager.tabs.has(id)) TabManager.close(id);
+                    break;
+
+                case 'documents_cleared':
+                    refreshList();
+                    Array.from(TabManager.tabs.keys()).forEach(tid => TabManager.close(tid));
+                    break;
             }
         };
     }

@@ -36,6 +36,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["Content-Security-Policy"] = _CSP
         response.headers["X-Frame-Options"] = "DENY"
+        # Every dynamic response here is per-user document content. Without this a
+        # browser (iOS Safari especially) may serve a heuristically cached copy,
+        # which makes the refresh button look broken. /static/ keeps its own
+        # validators from StaticFiles.
+        if not request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-store"
+
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = (

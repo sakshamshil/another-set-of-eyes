@@ -114,7 +114,11 @@ class DocumentStore:
         doc_orm.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(doc_orm)
-        return _to_pydantic(doc_orm)
+        doc = _to_pydantic(doc_orm)
+        # Re-pushing the same file path lands here, not in create(). Without this
+        # an open tab never hears about it and sits on stale content.
+        await broadcast(self.user_id, "document_updated", {"id": doc.id, "title": doc.title})
+        return doc
 
     async def archive(self, doc_id: str) -> Optional[Document]:
         result = await self.db.execute(
@@ -130,7 +134,9 @@ class DocumentStore:
         doc_orm.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(doc_orm)
-        return _to_pydantic(doc_orm)
+        doc = _to_pydantic(doc_orm)
+        await broadcast(self.user_id, "document_updated", {"id": doc.id, "title": doc.title})
+        return doc
 
     async def unarchive(self, doc_id: str) -> Optional[Document]:
         result = await self.db.execute(
@@ -146,7 +152,9 @@ class DocumentStore:
         doc_orm.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(doc_orm)
-        return _to_pydantic(doc_orm)
+        doc = _to_pydantic(doc_orm)
+        await broadcast(self.user_id, "document_updated", {"id": doc.id, "title": doc.title})
+        return doc
 
     async def delete(self, doc_id: str) -> bool:
         result = await self.db.execute(
@@ -160,6 +168,7 @@ class DocumentStore:
             return False
         await self.db.delete(doc_orm)
         await self.db.commit()
+        await broadcast(self.user_id, "document_deleted", {"id": doc_id})
         return True
 
     async def find_by_path(self, path: str) -> Optional[Document]:
@@ -186,7 +195,9 @@ class DocumentStore:
         doc_orm.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(doc_orm)
-        return _to_pydantic(doc_orm)
+        doc = _to_pydantic(doc_orm)
+        await broadcast(self.user_id, "document_updated", {"id": doc.id, "title": doc.title})
+        return doc
 
     async def clear_all(self) -> int:
         result = await self.db.execute(
@@ -197,4 +208,5 @@ class DocumentStore:
             delete(DocumentORM).where(DocumentORM.user_id == self.user_id)
         )
         await self.db.commit()
+        await broadcast(self.user_id, "documents_cleared", {"count": count})
         return count
