@@ -5,7 +5,8 @@ from uuid import uuid4
 
 # Shared field definitions
 _TITLE = Field(..., min_length=1, max_length=500)
-_CONTENT = Field(..., max_length=1_000_000)  # 1 MB ceiling
+_CONTENT = Field(..., max_length=5_000_000)  # 5 MB ceiling — HTML often inlines images as base64
+_KIND = Literal["markdown", "html"]
 
 
 class DocumentMetadata(BaseModel):
@@ -13,6 +14,7 @@ class DocumentMetadata(BaseModel):
     source: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     path: Optional[str] = None  # Folder path like "project-a/specs"
+    kind: Optional[_KIND] = None  # Agents set "html" to render the file as a page
 
 
 class Document(BaseModel):
@@ -21,6 +23,8 @@ class Document(BaseModel):
     title: str
     content: str = ""
     status: Literal["active", "archived"] = "active"
+    kind: _KIND = "markdown"
+    render_key: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
@@ -49,6 +53,7 @@ class DocumentSummary(BaseModel):
     id: str
     title: str
     status: str
+    kind: _KIND = "markdown"
     created_at: datetime
     updated_at: datetime
 
@@ -64,7 +69,9 @@ class CreateDocumentResponse(BaseModel):
     id: str
     title: str
     status: str
+    kind: _KIND = "markdown"
     url: str
+    render_url: Optional[str] = None  # Passphrase-free URL — only set for HTML docs
     created_at: datetime
 
 

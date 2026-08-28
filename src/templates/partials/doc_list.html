@@ -7,6 +7,7 @@
       <div class="doc-info">
         <div class="doc-title" data-title="{{ doc.title|e }}">{{ doc.title }}</div>
         <div class="doc-meta">
+          {% if doc.kind == 'html' %}<span class="badge badge-html">html</span>{% endif %}
           <span class="doc-time">{{ doc.updated_at | timeago }}</span>
           &bull;
           <span class="doc-source">{{ doc.metadata.source or 'Manual' }}</span>

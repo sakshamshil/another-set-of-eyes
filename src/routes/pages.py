@@ -1,18 +1,31 @@
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.db_models import User
 from src.dependencies import authenticate_phrase, get_current_user
-from src.services.document_store import DocumentStore
+from src.services.document_store import DocumentStore, get_by_render_key
 
 router = APIRouter()
+
+_RENDER_KEY_RE = re.compile(r"^[0-9a-f]{32}$")
+
+# The sandbox directive puts the response in an opaque origin even on a direct
+# top-level visit. That is what keeps a pushed page away from the passphrase in
+# localStorage. allow-same-origin is deliberately absent — adding it defeats the
+# whole mechanism. No source directives are listed, so the page may still load
+# Tailwind, Chart.js, fonts and anything else it needs from a CDN.
+_RENDER_CSP = (
+    "sandbox allow-scripts allow-popups allow-forms allow-downloads; "
+    "frame-ancestors 'self'"
+)
 
 templates_path = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=templates_path)
@@ -91,3 +104,37 @@ async def document_list_partial(
         "documents": documents,
         "status": status,
     })
+
+
+@router.get("/r/{render_key}")
+async def render_html_document(
+    render_key: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve a pushed HTML doc as a real page, in a sandbox.
+
+    No passphrase. The key in the URL is the capability, which is what lets a
+    frame load this and what lets the page open on any device. A frame cannot
+    send an Authorization header, and the passphrase must never sit in this URL
+    because the sandboxed page can read its own location.
+    """
+    if not _RENDER_KEY_RE.match(render_key):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    doc = await get_by_render_key(db, render_key)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    return Response(
+        content=doc.content,
+        # Just "text/html" — Starlette appends "; charset=utf-8" itself, and
+        # spelling it out here produces a doubled charset in the header.
+        media_type="text/html",
+        headers={
+            "Content-Security-Policy": _RENDER_CSP,
+            "X-Frame-Options": "SAMEORIGIN",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "Cache-Control": "no-store",
+        },
+    )

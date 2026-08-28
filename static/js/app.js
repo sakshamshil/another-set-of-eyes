@@ -274,11 +274,11 @@ class TabManager {
             pane.innerHTML = '';
             pane.appendChild(content);
 
-            // Update the tab title from the fetched page's <title>, which the server
+            // Update tab title from the fetched page's <title>, which the server
             // fills with the real doc title. The old code read an <h1> out of
             // .doc-view-container, but markdown has not been rendered into it yet at
-            // this point — so a tab opened by direct URL stayed named "Loading..."
-            // and was saved to localStorage that way.
+            // this point and HTML docs have no <h1> there at all — so a tab opened by
+            // direct URL stayed named "Loading..." and was saved that way.
             const fetchedTitle = (doc.title || '').trim();
             if (fetchedTitle) {
                 this.tabs.set(docId, { title: fetchedTitle });
@@ -970,6 +970,24 @@ const AgentInstall = {
  * Manages the Active / Archived toggle in the dashboard header.
  */
 const DocView = {
+    /**
+     * Copy the /r/{key} link. That URL carries no passphrase, so it renders on any
+     * device — which is the whole point of pushing HTML rather than markdown.
+     */
+    copyRenderLink(renderKey, btn) {
+        const url = `${window.location.origin}/r/${renderKey}`;
+        navigator.clipboard.writeText(url).then(() => {
+            if (!btn) return;
+            const original = btn.innerHTML;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.remove('copied');
+            }, 1500);
+        });
+    },
+
     currentStatus: 'active',
 
     setStatus(status, btn) {

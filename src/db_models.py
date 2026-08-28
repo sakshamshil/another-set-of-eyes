@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey
@@ -27,7 +28,17 @@ class Document(Base):
     source = Column(String, nullable=True)
     tags = Column(ARRAY(Text), nullable=False, server_default="{}")
     path = Column(String, nullable=True)
+    # "markdown" or "html". HTML docs render inside a sandboxed frame, never on the app origin.
+    kind = Column(String(20), nullable=False, default="markdown", server_default="markdown")
+    # Random per-doc key. A frame cannot send an Authorization header, so the URL carries this
+    # instead. Never the passphrase — a sandboxed page can read its own URL.
+    render_key = Column(String(32), unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="documents")
+
+
+def new_render_key() -> str:
+    """128 bits of entropy, hex encoded — URL safe and easy to validate."""
+    return secrets.token_hex(16)

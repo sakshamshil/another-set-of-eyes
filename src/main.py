@@ -34,17 +34,24 @@ _CSP = (
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
-        response.headers["Content-Security-Policy"] = _CSP
-        response.headers["X-Frame-Options"] = "DENY"
-        # Every dynamic response here is per-user document content. Without this a
-        # browser (iOS Safari especially) may serve a heuristically cached copy,
+
+        # /r/{key} serves user-pushed HTML and sets its own, stricter policy:
+        # a CSP sandbox that forces an opaque origin. Overwriting it here would
+        # both break the sandbox and stop the app framing its own pages, since
+        # X-Frame-Options: DENY blocks even same-origin frames.
+        if not request.url.path.startswith("/r/"):
+            response.headers["Content-Security-Policy"] = _CSP
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Every dynamic response here is per-user document content. Without this
+        # a browser (iOS Safari especially) may serve a heuristically cached copy,
         # which makes the refresh button look broken. /static/ keeps its own
         # validators from StaticFiles.
         if not request.url.path.startswith("/static/"):
             response.headers["Cache-Control"] = "no-store"
 
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=(), interest-cohort=()"
         )
@@ -98,29 +105,64 @@ async def health_check():
     return {"status": "healthy", "environment": settings.environment}
 
 
-@app.get("/install", response_class=PlainTextResponse)
-async def install_skill(request: Request):
-    skill_path = Path(__file__).parent.parent / "skill" / "SKILL.md"
-    skill_content = skill_path.read_text()
-    base_url = str(request.base_url).rstrip("/")
+# The npm package and this endpoint must hand out the same skill, so both read
+# one file: cli/assets/SKILL.md. Keeping a second copy under skill/ only let the
+# two drift, which is exactly what happened.
+_SKILL_PATH = Path(__file__).parent.parent / "cli" / "assets" / "SKILL.md"
 
-    return f"""#!/bin/bash
+# Plain template rather than an f-string: the script below contains JSON braces,
+# and doubling every one of them to survive .format is how mistakes get in.
+_INSTALL_SCRIPT = """#!/bin/bash
+set -e
+
 mkdir -p ~/.claude/skills/push-doc
 cat > ~/.claude/skills/push-doc/SKILL.md << 'SKILL_EOF'
-{skill_content}
+__SKILL__
 SKILL_EOF
 
-if ! grep -q "EYES_URL" ~/.bashrc 2>/dev/null; then
-  echo 'export EYES_URL="{base_url}"' >> ~/.bashrc
-  echo "Added EYES_URL to ~/.bashrc"
-fi
+mkdir -p ~/.asoe
+python3 - << 'CONFIG_EOF'
+import json, pathlib
+cfg = pathlib.Path.home() / ".asoe" / "config.json"
+data = {}
+if cfg.exists():
+    try:
+        data = json.loads(cfg.read_text())
+    except Exception:
+        data = {}
+data["url"] = "__BASE_URL__"
+cfg.write_text(json.dumps(data, indent=2))
+cfg.chmod(0o600)
+print("Wrote URL to ~/.asoe/config.json")
+CONFIG_EOF
 
-if ! grep -q "EYES_URL" ~/.zshrc 2>/dev/null; then
-  echo 'export EYES_URL="{base_url}"' >> ~/.zshrc 2>/dev/null || true
-fi
-
-echo "Skill installed to ~/.claude/skills/push-doc/SKILL.md"
-echo "EYES_URL set to {base_url}"
 echo ""
-echo "Run: source ~/.bashrc (or restart terminal)"
+echo "Skill installed: ~/.claude/skills/push-doc/SKILL.md"
+echo "ASOE_URL:        __BASE_URL__"
+echo ""
+if python3 -c "import json,pathlib,sys; sys.exit(0 if json.loads((pathlib.Path.home()/'.asoe'/'config.json').read_text()).get('token') else 1)" 2>/dev/null; then
+  echo "Passphrase already set. You are ready to push."
+else
+  echo "One step left — this script cannot know your passphrase."
+  echo "Set it with either of these:"
+  echo ""
+  echo "    npx asoe-install          # prompts for it, and covers other agents too"
+  echo "    export ASOE_TOKEN='your passphrase'"
+  echo ""
+fi
 """
+
+
+@app.get("/install", response_class=PlainTextResponse)
+async def install_skill(request: Request):
+    """Return a bash script that installs the push-doc skill for Claude Code.
+
+    `npx asoe-install` is the fuller path — it detects other agents and prompts
+    for the passphrase. This endpoint stays for `curl <url>/install | bash`.
+    """
+    base_url = str(request.base_url).rstrip("/")
+    return (
+        _INSTALL_SCRIPT
+        .replace("__SKILL__", _SKILL_PATH.read_text().rstrip("\n"))
+        .replace("__BASE_URL__", base_url)
+    )

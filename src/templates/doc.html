@@ -3,13 +3,29 @@
 {% block title %}{{ doc.title }}{% endblock %}
 
 {% block content %}
-<div class="doc-view-container">
+<div class="doc-view-container" data-kind="{{ doc.kind }}">
   <div class="doc-header">
     <div class="doc-meta">
       <span class="badge">{{ doc.status }}</span>
+      {% if doc.kind == 'html' %}<span class="badge badge-html">html</span>{% endif %}
       <span class="doc-updated">{{ doc.metadata.source or 'unknown' }} · {{ doc.updated_at | timeago }}</span>
     </div>
     <div class="doc-actions">
+      {% if doc.kind == 'html' and doc.render_key %}
+      <button class="icon-btn" onclick="DocView.copyRenderLink('{{ doc.render_key }}', this)" title="Copy shareable link" aria-label="Copy shareable link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+        </svg>
+      </button>
+      <a class="icon-btn" href="/r/{{ doc.render_key }}" target="_blank" rel="noopener noreferrer" title="Open full page" aria-label="Open full page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+      </a>
+      {% endif %}
       <button class="icon-btn" onclick="TabManager.load_tab_content('{{ doc.id }}')" title="Refresh" aria-label="Refresh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 4 23 10 17 10"></polyline>
@@ -43,11 +59,25 @@
     </div>
   </div>
 
+  {% if doc.kind == 'html' %}
+  {#
+    The sandbox attribute omits allow-same-origin on purpose. Without it the browser
+    gives the frame an opaque origin, so scripts inside the pushed page cannot read
+    the passphrase this app keeps in localStorage. Do not add allow-same-origin.
+  #}
+  <iframe
+    class="html-frame"
+    src="/r/{{ doc.render_key }}"
+    sandbox="allow-scripts allow-popups allow-forms allow-downloads"
+    referrerpolicy="no-referrer"
+    title="{{ doc.title }}"></iframe>
+  {% else %}
   <article class="markdown-body">
     <!-- Content rendered by app.js -->
   </article>
 
   <!-- Raw content for JS to pick up -->
   <script type="application/json" class="raw-markdown">{{ doc.content | tojson }}</script>
+  {% endif %}
 </div>
 {% endblock %}

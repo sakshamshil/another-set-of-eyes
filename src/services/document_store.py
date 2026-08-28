@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db_models import Document as DocumentORM
+from src.db_models import Document as DocumentORM, new_render_key
 from src.models import Document, CreateDocumentRequest, DocumentMetadata
 
 # Per-user SSE queues — in-memory, keyed by user_id string.
@@ -47,10 +47,13 @@ def _to_pydantic(doc: DocumentORM) -> Document:
         status=doc.status,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
+        kind=doc.kind or "markdown",
+        render_key=doc.render_key,
         metadata=DocumentMetadata(
             source=doc.source,
             tags=doc.tags or [],
             path=doc.path,
+            kind=doc.kind or "markdown",
         ),
     )
 
@@ -64,6 +67,7 @@ class DocumentStore:
 
     async def create(self, request: CreateDocumentRequest) -> Document:
         meta = request.metadata or DocumentMetadata()
+        kind = meta.kind or "markdown"
         doc_orm = DocumentORM(
             id=str(uuid4()).replace("-", "")[:16],
             user_id=self.user_id,
@@ -72,6 +76,9 @@ class DocumentStore:
             source=meta.source,
             tags=meta.tags,
             path=meta.path,
+            kind=kind,
+            # Only HTML needs a frame, so only HTML needs a passphrase-free URL.
+            render_key=new_render_key() if kind == "html" else None,
         )
         self.db.add(doc_orm)
         await self.db.commit()
@@ -99,7 +106,9 @@ class DocumentStore:
         result = await self.db.execute(q)
         return [_to_pydantic(d) for d in result.scalars().all()]
 
-    async def update(self, doc_id: str, title: str, content: str) -> Optional[Document]:
+    async def update(
+        self, doc_id: str, title: str, content: str, kind: Optional[str] = None
+    ) -> Optional[Document]:
         result = await self.db.execute(
             select(DocumentORM).where(
                 DocumentORM.id == doc_id,
@@ -111,12 +120,18 @@ class DocumentStore:
             return None
         doc_orm.title = title
         doc_orm.content = content
+        if kind:
+            doc_orm.kind = kind
+        # A doc can become HTML on a later push, and rows created before this
+        # feature have no key at all. Mint one on demand either way.
+        if doc_orm.kind == "html" and not doc_orm.render_key:
+            doc_orm.render_key = new_render_key()
         doc_orm.updated_at = datetime.utcnow()
         await self.db.commit()
         await self.db.refresh(doc_orm)
         doc = _to_pydantic(doc_orm)
         # Re-pushing the same file path lands here, not in create(). Without this
-        # an open tab never hears about it and sits on stale content.
+        # the open tab never hears about it and sits on stale content.
         await broadcast(self.user_id, "document_updated", {"id": doc.id, "title": doc.title})
         return doc
 
@@ -210,3 +225,18 @@ class DocumentStore:
         await self.db.commit()
         await broadcast(self.user_id, "documents_cleared", {"count": count})
         return count
+
+
+async def get_by_render_key(db: AsyncSession, key: str) -> Optional[Document]:
+    """Look up an HTML doc by its render key. Not scoped to a user — the key is the
+    capability, which is what lets a frame (and any device) load the page without a
+    passphrase. Markdown docs are excluded: they render through DOMPurify, not a frame.
+    """
+    result = await db.execute(
+        select(DocumentORM).where(
+            DocumentORM.render_key == key,
+            DocumentORM.kind == "html",
+        )
+    )
+    doc_orm = result.scalar_one_or_none()
+    return _to_pydantic(doc_orm) if doc_orm else None

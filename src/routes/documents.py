@@ -58,8 +58,10 @@ async def create_document(
     if body.metadata and body.metadata.path:
         existing = await store.find_by_path(body.metadata.path)
 
+    kind = body.metadata.kind if body.metadata else None
+
     if existing:
-        doc = await store.update(existing.id, body.title, body.content)
+        doc = await store.update(existing.id, body.title, body.content, kind=kind)
     else:
         doc = await store.create(body)
 
@@ -68,7 +70,9 @@ async def create_document(
         id=doc.id,
         title=doc.title,
         status=doc.status,
+        kind=doc.kind,
         url=f"{base_url}/doc/{doc.id}",
+        render_url=f"{base_url}/r/{doc.render_key}" if doc.render_key else None,
         created_at=doc.created_at,
     )
 
@@ -86,6 +90,7 @@ async def list_documents(
             id=d.id,
             title=d.title,
             status=d.status,
+            kind=d.kind,
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
