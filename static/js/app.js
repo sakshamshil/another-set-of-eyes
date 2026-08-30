@@ -274,6 +274,11 @@ class TabManager {
             pane.innerHTML = '';
             pane.appendChild(content);
 
+            // The pane now carries a fresh .doc-menu-source, so rebuild the top-bar
+            // menu. Only for the visible tab — a background refresh must not swap
+            // the menu out from under the document the user is looking at.
+            if (this.activeTabId === docId) DocMenu.sync();
+
             // Update tab title from the fetched page's <title>, which the server
             // fills with the real doc title. The old code read an <h1> out of
             // .doc-view-container, but markdown has not been rendered into it yet at
@@ -352,6 +357,21 @@ class TabManager {
     }
 
     /**
+     * Keep the browser tab title on the document the user is looking at.
+     * load_tab_content sets it when a document loads, but a plain tab switch
+     * loads nothing, so the title used to stay on whichever doc loaded last.
+     */
+    static syncPageTitle() {
+        const docId = this.activeTabId;
+        if (!docId || docId === 'dashboard') {
+            document.title = 'Another Set of Eyes';
+            return;
+        }
+        const title = (this.tabs.get(docId) || {}).title;
+        if (title) document.title = title;
+    }
+
+    /**
      * Switch tabs AND update URL (normal user action)
      */
     static switch(docId) {
@@ -374,6 +394,8 @@ class TabManager {
         }
 
         this.saveState();
+        this.syncPageTitle();
+        DocMenu.sync();
     }
 
     /**
@@ -390,6 +412,8 @@ class TabManager {
         });
 
         this.saveState();
+        this.syncPageTitle();
+        DocMenu.sync();
     }
 
     static close(docId) {
@@ -966,6 +990,79 @@ const AgentInstall = {
 };
 
 /**
+ * Doc Menu
+ * The per-document controls live in the top bar behind a "..." button instead of
+ * in a bar above the content, which cost a full row of height on every document.
+ * Each doc pane carries its own <template class="doc-menu-source">; this module
+ * clones the active one into the menu whenever the active tab changes.
+ */
+const DocMenu = {
+    sync() {
+        const wrap = document.getElementById('doc-menu-wrap');
+        const menu = document.getElementById('doc-menu');
+        if (!wrap || !menu) return;
+
+        this.close();
+        menu.innerHTML = '';
+
+        const docId = TabManager.activeTabId;
+        const pane = docId && docId !== 'dashboard'
+            ? document.getElementById(`pane-${docId}`)
+            : null;
+        const tpl = pane ? pane.querySelector('.doc-menu-source') : null;
+
+        // No template yet — the pane is still loading. Keep the button hidden
+        // rather than showing an empty menu; load_tab_content calls sync again.
+        if (!tpl) {
+            wrap.hidden = true;
+            return;
+        }
+
+        menu.appendChild(tpl.content.cloneNode(true));
+        wrap.hidden = false;
+    },
+
+    toggle(btn) {
+        const menu = document.getElementById('doc-menu');
+        if (!menu) return;
+        menu.classList.contains('open') ? this.close() : this.open(btn);
+    },
+
+    open(btn) {
+        const menu = document.getElementById('doc-menu');
+        if (!menu) return;
+        menu.classList.add('open');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+
+        // Registered on the next tick so the click that opened the menu does not
+        // immediately close it again.
+        setTimeout(() => {
+            document.addEventListener('click', DocMenu._onOutsideClick);
+            document.addEventListener('keydown', DocMenu._onKeydown);
+        }, 0);
+    },
+
+    close() {
+        const menu = document.getElementById('doc-menu');
+        const btn = document.querySelector('.tab-docmenu');
+        if (menu) menu.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', DocMenu._onOutsideClick);
+        document.removeEventListener('keydown', DocMenu._onKeydown);
+    },
+
+    _onOutsideClick(e) {
+        const wrap = document.getElementById('doc-menu-wrap');
+        if (wrap && wrap.contains(e.target)) return;
+        DocMenu.close();
+    },
+
+    _onKeydown(e) {
+        if (e.key === 'Escape') DocMenu.close();
+    }
+};
+
+/**
  * Doc View
  * Manages the Active / Archived toggle in the dashboard header.
  */
@@ -1089,8 +1186,18 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'new-doc':        DocumentCreator.open(); break;
             case 'set-status':     DocView.setStatus(el.dataset.status, el); break;
             case 'toggle-connect': AgentInstall.togglePopover(el); break;
+            case 'toggle-doc-menu': DocMenu.toggle(el); break;
             case 'clear-all':      DocumentManager.clearAll(el); break;
         }
+    });
+
+    // Close the doc menu after the user picks an item. "Copy shareable link" asks
+    // for a short delay through data-keep-open so its tick stays visible.
+    document.addEventListener('click', (e) => {
+        const item = e.target.closest('.doc-menu-item');
+        if (!item || !item.closest('#doc-menu')) return;
+        const hold = parseInt(item.dataset.keepOpen || '0', 10);
+        hold > 0 ? setTimeout(() => DocMenu.close(), hold) : DocMenu.close();
     });
 
     if (!AuthGate.getPhrase()) {

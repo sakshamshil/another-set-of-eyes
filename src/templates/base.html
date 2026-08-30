@@ -25,7 +25,7 @@
           crossorigin="anonymous"></script>
 
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/css/style.css?v=8">
+  <link rel="stylesheet" href="/static/css/style.css?v=9">
 
   <!-- Syntax Highlighting -->
   <link rel="stylesheet"
@@ -78,6 +78,20 @@
       </nav>
 
       <div class="window-controls">
+        <!-- Per-document actions. Hidden on the dashboard; app.js fills the menu
+             from the active pane's <template class="doc-menu-source">. -->
+        <div class="doc-menu-wrap" id="doc-menu-wrap" hidden>
+          <button class="tab-docmenu" data-action="toggle-doc-menu" title="Document actions"
+                  aria-label="Document actions" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <circle cx="12" cy="5" r="1.8"></circle>
+              <circle cx="12" cy="12" r="1.8"></circle>
+              <circle cx="12" cy="19" r="1.8"></circle>
+            </svg>
+          </button>
+          <div class="doc-menu" id="doc-menu" role="menu"></div>
+        </div>
+
         <div class="connect-wrap">
           <button class="tab-connect" data-action="toggle-connect" title="Connect your agent">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -176,7 +190,7 @@
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=8"></script>
+  <script src="/static/js/app.js?v=9"></script>
 </body>
 
 </html>

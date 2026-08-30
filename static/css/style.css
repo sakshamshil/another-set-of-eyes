@@ -272,6 +272,98 @@ body {
   border-color: var(--glass-border);
 }
 
+/* --- Per-document menu (top bar) ---
+   These controls used to occupy a full row above every document. They now sit
+   behind the "..." button so the document itself gets that height back. */
+.doc-menu-wrap {
+  position: relative;
+}
+
+.doc-menu-wrap[hidden] { display: none; }
+
+.tab-docmenu {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tab-docmenu svg { width: 16px; height: 16px; }
+
+.tab-docmenu:hover,
+.tab-docmenu[aria-expanded="true"] {
+  background: var(--glass-surface);
+  color: var(--text-main);
+  border-color: var(--glass-border);
+}
+
+.doc-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 220px;
+  z-index: 110;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.doc-menu.open { display: block; }
+
+.doc-menu-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--glass-border);
+  font-size: 0.72rem;
+}
+
+.doc-menu-item {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.doc-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+
+.doc-menu-item:hover,
+.doc-menu-item:focus-visible {
+  background: var(--glass-surface);
+  color: var(--text-main);
+  outline: none;
+}
+
+.doc-menu-item:hover svg { color: var(--text-main); }
+
 /* Connect popover */
 .connect-wrap {
   position: relative;
@@ -601,25 +693,6 @@ body {
   padding: 24px 24px 120px;
 }
 
-.doc-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  max-width: 720px;
-  margin: 0 auto 8px;
-  padding-bottom: 8px;
-}
-
-.doc-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-dim);
-  font-size: 0.78rem;
-  min-width: 0;
-}
-
 .doc-updated {
   color: var(--text-dim);
   white-space: nowrap;
@@ -639,27 +712,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Icon-only action buttons in the doc header */
-.icon-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.icon-btn svg { width: 16px; height: 16px; }
-
-.icon-btn:hover {
-  background: var(--glass-surface);
-  color: var(--text-main);
-  border-color: var(--glass-border);
-}
 
 /* First heading inside markdown body acts as the page title —
    kill the default top margin so it hugs the metadata row. */
@@ -1346,11 +1398,6 @@ body {
   .doc-view-container {
     padding: 12px 12px 80px;
   }
-  .doc-meta {
-    font-size: 0.7rem;
-    gap: 8px;
-  }
-
   /* Markdown body */
   .markdown-body h1 { font-size: 1.4rem; }
   .markdown-body h2 { font-size: 1.2rem; }
@@ -1373,12 +1420,6 @@ body {
   gap: 8px;
 }
 
-.doc-view-container[data-kind="html"] .doc-header {
-  max-width: none;
-  flex: 0 0 auto;
-  margin-bottom: 0;
-}
-
 .html-frame {
   flex: 1 1 auto;
   width: 100%;
@@ -1396,10 +1437,6 @@ body {
   border-color: rgba(139, 92, 246, 0.35);
 }
 
-/* The "open full page" control is an anchor, not a button */
-a.icon-btn {
-  text-decoration: none;
-}
 
 @media (max-width: 768px) {
   .doc-view-container[data-kind="html"] {

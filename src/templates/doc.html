@@ -4,60 +4,77 @@
 
 {% block content %}
 <div class="doc-view-container" data-kind="{{ doc.kind }}">
-  <div class="doc-header">
-    <div class="doc-meta">
-      <span class="badge">{{ doc.status }}</span>
+  {#
+    The per-document controls used to sit in a visible bar above the content. That
+    bar cost a whole row of height on every doc, so the controls now live in a menu
+    behind the "..." button in the top bar. This template only carries them; app.js
+    clones this template into that menu when the tab becomes active. A <template>
+    is inert, so nothing here renders or runs until it is cloned.
+  #}
+  <template class="doc-menu-source">
+    <div class="doc-menu-meta">
+      {# "active" is the state of nearly every doc, so the badge said nothing.
+         Only show a status badge when the state is worth noticing. #}
+      {% if doc.status != 'active' %}<span class="badge">{{ doc.status }}</span>{% endif %}
       {% if doc.kind == 'html' %}<span class="badge badge-html">html</span>{% endif %}
       <span class="doc-updated">{{ doc.metadata.source or 'unknown' }} · {{ doc.updated_at | timeago }}</span>
     </div>
-    <div class="doc-actions">
-      {% if doc.kind == 'html' and doc.render_key %}
-      <button class="icon-btn" onclick="DocView.copyRenderLink('{{ doc.render_key }}', this)" title="Copy shareable link" aria-label="Copy shareable link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-        </svg>
-      </button>
-      <a class="icon-btn" href="/r/{{ doc.render_key }}" target="_blank" rel="noopener noreferrer" title="Open full page" aria-label="Open full page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-          <polyline points="15 3 21 3 21 9"></polyline>
-          <line x1="10" y1="14" x2="21" y2="3"></line>
-        </svg>
-      </a>
-      {% endif %}
-      <button class="icon-btn" onclick="TabManager.load_tab_content('{{ doc.id }}')" title="Refresh" aria-label="Refresh">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"></polyline>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-        </svg>
-      </button>
-      {% if doc.status == 'active' %}
-      <button class="icon-btn" onclick="DocumentCreator.edit('{{ doc.id }}')" title="Edit" aria-label="Edit">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-        </svg>
-      </button>
-      <button class="icon-btn" onclick="DocumentManager.archive('{{ doc.id }}', true)" title="Archive" aria-label="Archive">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="21 8 21 21 3 21 3 8"></polyline>
-          <rect x="1" y="3" width="22" height="5"></rect>
-          <line x1="10" y1="12" x2="14" y2="12"></line>
-        </svg>
-      </button>
-      {% else %}
-      <button class="icon-btn" onclick="DocumentManager.unarchive('{{ doc.id }}', true)" title="Unarchive" aria-label="Unarchive">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="21 8 21 21 3 21 3 8"></polyline>
-          <rect x="1" y="3" width="22" height="5"></rect>
-          <polyline points="10 14 12 12 14 14"></polyline>
-          <line x1="12" y1="12" x2="12" y2="17"></line>
-        </svg>
-      </button>
-      {% endif %}
-    </div>
-  </div>
+
+    {% if doc.kind == 'html' and doc.render_key %}
+    <button class="doc-menu-item" data-keep-open="900"
+            onclick="DocView.copyRenderLink('{{ doc.render_key }}', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+      </svg>
+      <span>Copy shareable link</span>
+    </button>
+    <a class="doc-menu-item" href="/r/{{ doc.render_key }}" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+        <polyline points="15 3 21 3 21 9"></polyline>
+        <line x1="10" y1="14" x2="21" y2="3"></line>
+      </svg>
+      <span>Open full page</span>
+    </a>
+    {% endif %}
+
+    <button class="doc-menu-item" onclick="TabManager.load_tab_content('{{ doc.id }}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+      <span>Refresh</span>
+    </button>
+
+    {% if doc.status == 'active' %}
+    <button class="doc-menu-item" onclick="DocumentCreator.edit('{{ doc.id }}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+      <span>Edit</span>
+    </button>
+    <button class="doc-menu-item" onclick="DocumentManager.archive('{{ doc.id }}', true)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+        <rect x="1" y="3" width="22" height="5"></rect>
+        <line x1="10" y1="12" x2="14" y2="12"></line>
+      </svg>
+      <span>Archive</span>
+    </button>
+    {% else %}
+    <button class="doc-menu-item" onclick="DocumentManager.unarchive('{{ doc.id }}', true)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+        <rect x="1" y="3" width="22" height="5"></rect>
+        <polyline points="10 14 12 12 14 14"></polyline>
+        <line x1="12" y1="12" x2="12" y2="17"></line>
+      </svg>
+      <span>Unarchive</span>
+    </button>
+    {% endif %}
+  </template>
 
   {% if doc.kind == 'html' %}
   {#
