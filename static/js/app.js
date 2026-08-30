@@ -1023,8 +1023,10 @@ const DocMenu = {
     },
 
     toggle(btn) {
+        const wrap = document.getElementById('doc-menu-wrap');
         const menu = document.getElementById('doc-menu');
-        if (!menu) return;
+        // Nothing to show on the dashboard, where the button is not rendered.
+        if (!menu || !wrap || wrap.hidden) return;
         menu.classList.contains('open') ? this.close() : this.open(btn);
     },
 
