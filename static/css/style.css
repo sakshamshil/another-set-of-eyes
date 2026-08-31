@@ -466,6 +466,67 @@ body {
   border-color: var(--text-dim);
 }
 
+.acct-phrase-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 10px;
+}
+
+.acct-phrase-label {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.acct-mini {
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.acct-mini svg { width: 14px; height: 14px; }
+
+.acct-mini:hover,
+.acct-mini[aria-pressed="true"] {
+  background: var(--glass-surface);
+  color: var(--text-main);
+}
+
+.acct-mini.copied { color: var(--status-active); }
+
+.acct-phrase-box[hidden] { display: none; }
+
+.acct-phrase-box {
+  padding: 2px 10px 8px;
+}
+
+.acct-phrase-text {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-main);
+  word-break: break-word;
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.acct-phrase-warn {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
 /* Optional label field — only shown while adding a second space. */
 .auth-gate-label[hidden] { display: none; }
 

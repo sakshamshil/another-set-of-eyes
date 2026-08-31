@@ -103,6 +103,9 @@ const Accounts = {
         window.location.href = '/';
     },
 
+    /** The live phrase. Used only by the copy and reveal controls. */
+    activePhrase() { return localStorage.getItem('phrase') || ''; },
+
     rename(id, label) {
         const clean = (label || '').trim().slice(0, 24);
         if (!clean) return;
@@ -300,6 +303,25 @@ const AccountMenu = {
             <p class="acct-menu-head">Spaces on this device</p>
             <div class="acct-list" id="acct-list"></div>
             <div class="acct-menu-sep"></div>
+            <div class="acct-phrase-row">
+                <span class="acct-phrase-label">Space phrase</span>
+                <button class="acct-mini" data-action="copy-phrase"
+                        title="Copy phrase" aria-label="Copy phrase">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <button class="acct-mini" data-action="reveal-phrase" aria-pressed="false"
+                        title="Show phrase" aria-label="Show phrase">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
+            <div class="acct-phrase-box" id="acct-phrase-box" hidden></div>
+            <div class="acct-menu-sep"></div>
             <button class="doc-menu-item" data-action="add-account">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -339,6 +361,60 @@ const AccountMenu = {
         });
     },
 
+    /**
+     * Copy is the first-class action here. It moves the phrase to another device
+     * without ever drawing it, so nobody beside the user reads it off the screen.
+     */
+    copyPhrase(btn) {
+        const phrase = Accounts.activePhrase();
+        if (!phrase) return;
+        navigator.clipboard.writeText(phrase).then(() => {
+            if (!btn) return;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.remove('copied');
+            }, 1500);
+        });
+    },
+
+    /**
+     * Show the phrase for a short time. It is a bearer token, so it stays out of
+     * the DOM until the user asks, and it goes back out on a timer, on a second
+     * click, and whenever the menu closes.
+     */
+    revealPhrase(btn) {
+        const box = document.getElementById('acct-phrase-box');
+        if (!box) return;
+        if (!box.hidden) { this.hidePhrase(); return; }
+
+        const phrase = Accounts.activePhrase();
+        if (!phrase) return;
+
+        const text = document.createElement('code');
+        text.className = 'acct-phrase-text';
+        text.textContent = phrase;
+        const warn = document.createElement('p');
+        warn.className = 'acct-phrase-warn';
+        warn.textContent = 'Anyone with this phrase can read this space.';
+        box.append(text, warn);
+        box.hidden = false;
+        if (btn) btn.setAttribute('aria-pressed', 'true');
+
+        clearTimeout(this._revealTimer);
+        this._revealTimer = setTimeout(() => AccountMenu.hidePhrase(), 15000);
+    },
+
+    hidePhrase() {
+        clearTimeout(this._revealTimer);
+        const box = document.getElementById('acct-phrase-box');
+        const btn = document.querySelector('[data-action="reveal-phrase"]');
+        if (box) { box.textContent = ''; box.hidden = true; }
+        if (btn) btn.setAttribute('aria-pressed', 'false');
+    },
+
     toggle(btn) {
         const menu = document.getElementById('acct-menu');
         if (!menu) return;
@@ -364,6 +440,8 @@ const AccountMenu = {
     close() {
         const menu = document.getElementById('acct-menu');
         const btn = document.querySelector('.tab-account');
+        // A closed menu must never keep the phrase in the page.
+        this.hidePhrase();
         if (menu) menu.classList.remove('open');
         if (btn) btn.setAttribute('aria-expanded', 'false');
         document.removeEventListener('click', AccountMenu._onOutsideClick);
@@ -1537,6 +1615,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'rename-account': AccountMenu.startRename(el.dataset.acctId); break;
             case 'add-account':    AccountMenu.close(); AuthGate.openAdd(); break;
             case 'signout-account': Accounts.signOutCurrent(); break;
+            case 'copy-phrase':    AccountMenu.copyPhrase(el); break;
+            case 'reveal-phrase':  AccountMenu.revealPhrase(el); break;
             case 'clear-all':      DocumentManager.clearAll(el); break;
         }
     });
