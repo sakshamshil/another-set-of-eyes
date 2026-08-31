@@ -25,7 +25,7 @@
           crossorigin="anonymous"></script>
 
   <!-- Styles -->
-  <link rel="stylesheet" href="/static/css/style.css?v=9">
+  <link rel="stylesheet" href="/static/css/style.css?v=10">
 
   <!-- Syntax Highlighting -->
   <link rel="stylesheet"
@@ -113,13 +113,14 @@
             <p class="empty-install-hint">Works with Claude Code, Codex, OpenCode, Cursor and more.</p>
           </div>
         </div>
-        <button class="tab-signout" title="Sign out">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-        </button>
+        <!-- Space switcher. A phrase is an account, and this browser may hold
+             several, so the user can keep separate sets of documents apart.
+             app.js fills the menu; sign out lives inside it. -->
+        <div class="acct-wrap" id="acct-wrap">
+          <button class="tab-account" data-action="toggle-account-menu"
+                  aria-haspopup="true" aria-expanded="false">S</button>
+          <div class="acct-menu" id="acct-menu" role="menu"></div>
+        </div>
         <button class="tab-close-all" title="Close all tabs (Alt+W)" aria-label="Close all tabs">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -184,13 +185,23 @@
         autocomplete="off"
         spellcheck="false"
       />
+      <input
+        id="auth-label-input"
+        class="auth-gate-input auth-gate-label"
+        type="text"
+        placeholder="Name this space (optional)"
+        maxlength="24"
+        autocomplete="off"
+        spellcheck="false"
+        hidden
+      />
       <button id="auth-submit-btn" class="auth-gate-btn">Enter</button>
       <p id="auth-error" class="auth-gate-error"></p>
       <p class="auth-gate-hint">New phrase creates a new space. Same phrase returns to yours.<br>No recovery if you forget it. We hash it, never store it.</p>
     </div>
   </div>
 
-  <script src="/static/js/app.js?v=9"></script>
+  <script src="/static/js/app.js?v=10"></script>
 </body>
 
 </html>

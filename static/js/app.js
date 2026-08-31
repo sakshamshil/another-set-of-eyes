@@ -1,11 +1,147 @@
 // static/js/app.js
 
 /**
+ * Accounts
+ * A phrase is an account. One browser may hold several of them, so the user can
+ * keep separate sets of documents apart and move between them without typing a
+ * phrase again.
+ *
+ * localStorage layout:
+ *   accounts         [{ id, label, phrase, tabs, activeTabId }]
+ *   activeAccountId  the entry whose phrase is live
+ *   phrase           the live phrase — unchanged, so the rest of the app is untouched
+ *   openTabs         the live account's tabs — also unchanged
+ *
+ * The phrase is the API token, so it never reaches the DOM. The menu shows labels.
+ */
+const Accounts = {
+    load() {
+        try {
+            const list = JSON.parse(localStorage.getItem('accounts') || '[]');
+            return Array.isArray(list) ? list : [];
+        } catch (e) {
+            return [];
+        }
+    },
+
+    save(list) { localStorage.setItem('accounts', JSON.stringify(list)); },
+
+    activeId() { return localStorage.getItem('activeAccountId') || ''; },
+
+    _newId() { return Math.random().toString(36).slice(2, 10); },
+
+    /**
+     * Bring the store in line with the live phrase. This covers a user who signed
+     * in before spaces existed, and any phrase set straight by AuthGate.submit.
+     */
+    migrate() {
+        const phrase = localStorage.getItem('phrase');
+        if (!phrase) return;
+        const list = this.load();
+        let entry = list.find(a => a.phrase === phrase);
+        if (!entry) {
+            entry = {
+                id: this._newId(),
+                label: `Space ${list.length + 1}`,
+                phrase,
+                tabs: [],
+                activeTabId: 'dashboard',
+            };
+            list.push(entry);
+            this.save(list);
+        }
+        if (this.activeId() !== entry.id) localStorage.setItem('activeAccountId', entry.id);
+    },
+
+    add(phrase, label) {
+        const list = this.load();
+        const existing = list.find(a => a.phrase === phrase);
+        if (existing) {
+            this.switchTo(existing.id);
+            return;
+        }
+        const entry = {
+            id: this._newId(),
+            label: (label || '').trim() || `Space ${list.length + 1}`,
+            phrase,
+            tabs: [],
+            activeTabId: 'dashboard',
+        };
+        list.push(entry);
+        this.save(list);
+        this.switchTo(entry.id);
+    },
+
+    /**
+     * Park the open tabs on the space we leave, hand the app the incoming phrase,
+     * then navigate. A full page load rebuilds the tabs, the SSE stream and every
+     * cached pane at once, so nothing from the old space stays on screen.
+     */
+    switchTo(id) {
+        const list = this.load();
+        const target = list.find(a => a.id === id);
+        if (!target) return;
+
+        const current = list.find(a => a.id === this.activeId());
+        if (current && current.id !== target.id) {
+            try {
+                current.tabs = JSON.parse(localStorage.getItem('openTabs') || '[]');
+            } catch (e) {
+                current.tabs = [];
+            }
+            current.activeTabId = localStorage.getItem('activeTabId') || 'dashboard';
+        }
+        this.save(list);
+
+        localStorage.setItem('phrase', target.phrase);
+        localStorage.setItem('activeAccountId', target.id);
+        localStorage.setItem('openTabs', JSON.stringify(target.tabs || []));
+        localStorage.setItem('activeTabId', target.activeTabId || 'dashboard');
+
+        // Go to the root rather than reload — the current URL may point at a
+        // document that belongs to the space we are leaving.
+        window.location.href = '/';
+    },
+
+    rename(id, label) {
+        const clean = (label || '').trim().slice(0, 24);
+        if (!clean) return;
+        const list = this.load();
+        const entry = list.find(a => a.id === id);
+        if (!entry) return;
+        entry.label = clean;
+        this.save(list);
+    },
+
+    /**
+     * Forget the current space on this device. The documents stay on the server,
+     * and the phrase brings them back. Falls back to the next space if one exists.
+     */
+    signOutCurrent() {
+        const remaining = this.load().filter(a => a.id !== this.activeId());
+        this.save(remaining);
+        localStorage.removeItem('openTabs');
+        localStorage.removeItem('activeTabId');
+        localStorage.removeItem('activeAccountId');
+
+        if (remaining.length) {
+            this.switchTo(remaining[0].id);
+            return;
+        }
+        localStorage.removeItem('phrase');
+        window.location.href = '/';
+    }
+};
+
+/**
  * Auth Gate
  * Manages phrase-based authentication. Phrase is stored in localStorage
  * and sent as Authorization: Bearer <phrase> on every request.
  */
 class AuthGate {
+    // 'signin' when nobody is signed in, 'add' when an existing user adds a space.
+    static mode = 'signin';
+
     static show() {
         const gate = document.getElementById('auth-gate');
         if (gate) gate.style.display = 'flex';
@@ -27,14 +163,65 @@ class AuthGate {
 
     static clear() {
         localStorage.removeItem('phrase');
+        this.closeAdd();
         this.show();
     }
 
     static signOut() {
-        localStorage.removeItem('phrase');
-        localStorage.removeItem('openTabs');
-        localStorage.removeItem('activeTabId');
-        window.location.reload();
+        Accounts.signOutCurrent();
+    }
+
+    /**
+     * Reuse the gate to add a second space. Same fields, different wording, and
+     * an optional label so the menu lists something better than "Space 2".
+     */
+    static openAdd() {
+        this.mode = 'add';
+        const title = document.querySelector('.auth-gate-title');
+        const subtitle = document.querySelector('.auth-gate-subtitle');
+        const hint = document.querySelector('.auth-gate-hint');
+        const label = document.getElementById('auth-label-input');
+        const input = document.getElementById('auth-phrase-input');
+        const error = document.getElementById('auth-error');
+
+        // Keep the sign-in wording so closeAdd can put it back. A 401 later reopens
+        // this same gate, and it must not still say "Add a space".
+        if (!this._defaults) {
+            this._defaults = {
+                title: title ? title.textContent : '',
+                subtitle: subtitle ? subtitle.textContent : '',
+                hint: hint ? hint.innerHTML : '',
+            };
+        }
+
+        if (title) title.textContent = 'Add a space';
+        if (subtitle) subtitle.textContent = 'Another phrase, another set of documents.';
+        if (hint) hint.textContent = 'This device remembers both. Press Escape to go back.';
+        if (label) { label.hidden = false; label.value = ''; }
+        if (input) input.value = '';
+        if (error) error.textContent = '';
+
+        this.show();
+        if (input) input.focus();
+    }
+
+    /** Leave add mode and put the gate back the way the sign-in screen needs it. */
+    static closeAdd() {
+        if (this.mode !== 'add') return;
+        this.mode = 'signin';
+        const label = document.getElementById('auth-label-input');
+        if (label) { label.hidden = true; label.value = ''; }
+
+        const d = this._defaults;
+        if (d) {
+            const title = document.querySelector('.auth-gate-title');
+            const subtitle = document.querySelector('.auth-gate-subtitle');
+            const hint = document.querySelector('.auth-gate-hint');
+            if (title) title.textContent = d.title;
+            if (subtitle) subtitle.textContent = d.subtitle;
+            if (hint) hint.innerHTML = d.hint;
+        }
+        this.hide();
     }
 
     static async submit() {
@@ -69,7 +256,15 @@ class AuthGate {
                 throw new Error(msg);
             }
 
+            if (this.mode === 'add') {
+                const label = document.getElementById('auth-label-input');
+                // add() navigates, so nothing after this runs.
+                Accounts.add(phrase, label ? label.value : '');
+                return;
+            }
+
             localStorage.setItem('phrase', phrase);
+            Accounts.migrate();
             window.location.reload();
         } catch (err) {
             if (errorEl) errorEl.textContent = err.message;
@@ -78,6 +273,149 @@ class AuthGate {
         }
     }
 }
+
+/**
+ * Account Menu
+ * The top-bar button and dropdown for switching space. Labels are user text, so
+ * rows are built with textContent, never innerHTML.
+ */
+const AccountMenu = {
+    render() {
+        const menu = document.getElementById('acct-menu');
+        const btn = document.querySelector('.tab-account');
+        if (!menu) return;
+
+        const list = Accounts.load();
+        const activeId = Accounts.activeId();
+        const active = list.find(a => a.id === activeId);
+        const label = (active && active.label) || 'Space';
+
+        if (btn) {
+            btn.textContent = label.charAt(0).toUpperCase() || 'S';
+            btn.title = `Space: ${label}`;
+            btn.setAttribute('aria-label', `Space: ${label}. Switch space`);
+        }
+
+        menu.innerHTML = `
+            <p class="acct-menu-head">Spaces on this device</p>
+            <div class="acct-list" id="acct-list"></div>
+            <div class="acct-menu-sep"></div>
+            <button class="doc-menu-item" data-action="add-account">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg><span>Add a space</span>
+            </button>
+            <button class="doc-menu-item" data-action="signout-account">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg><span>Sign out of this space</span>
+            </button>`;
+
+        const listEl = menu.querySelector('#acct-list');
+        list.forEach(a => {
+            const isActive = a.id === activeId;
+            const row = document.createElement('button');
+            row.className = 'doc-menu-item acct-row' + (isActive ? ' is-active' : '');
+            row.dataset.acctId = a.id;
+            row.dataset.action = isActive ? 'rename-account' : 'switch-account';
+
+            const dot = document.createElement('span');
+            dot.className = 'acct-dot';
+            const name = document.createElement('span');
+            name.className = 'acct-name';
+            name.textContent = a.label;
+            row.append(dot, name);
+
+            if (isActive) {
+                const hint = document.createElement('span');
+                hint.className = 'acct-hint';
+                hint.textContent = 'rename';
+                row.appendChild(hint);
+            }
+            listEl.appendChild(row);
+        });
+    },
+
+    toggle(btn) {
+        const menu = document.getElementById('acct-menu');
+        if (!menu) return;
+        menu.classList.contains('open') ? this.close() : this.open(btn);
+    },
+
+    open(btn) {
+        const menu = document.getElementById('acct-menu');
+        if (!menu) return;
+        DocMenu.close();
+        this.render();
+        menu.classList.add('open');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+
+        // Registered on the next tick so the click that opened the menu does not
+        // close it again straight away.
+        setTimeout(() => {
+            document.addEventListener('click', AccountMenu._onOutsideClick);
+            document.addEventListener('keydown', AccountMenu._onKeydown);
+        }, 0);
+    },
+
+    close() {
+        const menu = document.getElementById('acct-menu');
+        const btn = document.querySelector('.tab-account');
+        if (menu) menu.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', AccountMenu._onOutsideClick);
+        document.removeEventListener('keydown', AccountMenu._onKeydown);
+    },
+
+    /** Swap the active row for a text field. Enter or blur saves, Escape cancels. */
+    startRename(id) {
+        const row = document.querySelector(`.acct-row[data-acct-id="${id}"]`);
+        const entry = Accounts.load().find(a => a.id === id);
+        if (!row || !entry) return;
+
+        const input = document.createElement('input');
+        input.className = 'acct-rename';
+        input.type = 'text';
+        input.maxLength = 24;
+        input.value = entry.label;
+        row.replaceWith(input);
+        input.focus();
+        input.select();
+
+        // The blur that follows a save would otherwise save a second time.
+        let done = false;
+        const commit = () => {
+            if (done) return;
+            done = true;
+            Accounts.rename(id, input.value);
+            AccountMenu.render();
+        };
+        input.addEventListener('keydown', (e) => {
+            // Escape belongs to the field while renaming, not to the menu.
+            e.stopPropagation();
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') { done = true; AccountMenu.render(); }
+        });
+        input.addEventListener('blur', commit);
+    },
+
+    _onOutsideClick(e) {
+        // Renaming replaces the clicked row with a text field, so by the time this
+        // runs the target may already be off the page. A detached node is not an
+        // outside click — treating it as one would shut the menu mid-rename.
+        if (!e.target.isConnected) return;
+        const wrap = document.getElementById('acct-wrap');
+        if (wrap && wrap.contains(e.target)) return;
+        AccountMenu.close();
+    },
+
+    _onKeydown(e) {
+        if (e.key === 'Escape') AccountMenu.close();
+    }
+};
 
 /**
  * Authenticated fetch — wraps window.fetch, injects Bearer header,
@@ -1141,9 +1479,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dashboardTab = document.querySelector('[data-tab-id="dashboard"]');
     if (dashboardTab) dashboardTab.addEventListener('click', () => TabManager.switch('dashboard'));
 
-    const signOutBtn = document.querySelector('.tab-signout');
-    if (signOutBtn) signOutBtn.addEventListener('click', () => AuthGate.signOut());
-
     const closeAllBtn = document.querySelector('.tab-close-all');
     if (closeAllBtn) closeAllBtn.addEventListener('click', (e) => TabManager.closeAll(e.currentTarget));
 
@@ -1161,12 +1496,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') AuthGate.submit();
     });
 
+    const labelInput = document.getElementById('auth-label-input');
+    if (labelInput) labelInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') AuthGate.submit();
+    });
+
     const authBtn = document.getElementById('auth-submit-btn');
     if (authBtn) authBtn.addEventListener('click', () => AuthGate.submit());
 
     // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') DocumentCreator.close();
+        if (e.key !== 'Escape') return;
+        // While adding a space the gate covers the app, so Escape must dismiss it.
+        if (AuthGate.mode === 'add') { AuthGate.closeAdd(); return; }
+        DocumentCreator.close();
     });
 
     // Delegated click handler for data-action elements.
@@ -1189,6 +1532,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'set-status':     DocView.setStatus(el.dataset.status, el); break;
             case 'toggle-connect': AgentInstall.togglePopover(el); break;
             case 'toggle-doc-menu': DocMenu.toggle(el); break;
+            case 'toggle-account-menu': AccountMenu.toggle(el); break;
+            case 'switch-account': Accounts.switchTo(el.dataset.acctId); break;
+            case 'rename-account': AccountMenu.startRename(el.dataset.acctId); break;
+            case 'add-account':    AccountMenu.close(); AuthGate.openAdd(); break;
+            case 'signout-account': Accounts.signOutCurrent(); break;
             case 'clear-all':      DocumentManager.clearAll(el); break;
         }
     });
@@ -1202,11 +1550,15 @@ document.addEventListener('DOMContentLoaded', () => {
         hold > 0 ? setTimeout(() => DocMenu.close(), hold) : DocMenu.close();
     });
 
+    // Register the live phrase as a space before anything reads the list.
+    Accounts.migrate();
+
     if (!AuthGate.getPhrase()) {
         AuthGate.show();
         return; // Don't initialise the app until the user authenticates
     }
 
+    AccountMenu.render();
     TabManager.init();
     SSEClient.connect();
 });
